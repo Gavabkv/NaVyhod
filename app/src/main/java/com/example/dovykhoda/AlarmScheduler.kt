@@ -1,0 +1,266 @@
+package com.example.dovykhoda
+
+import android.app.AlarmManager
+import android.app.PendingIntent
+import android.content.Context
+import android.content.Intent
+import android.os.Build
+import android.util.Log
+
+object AlarmScheduler {
+    const val ACTION_TRIGGER = "com.example.dovykhoda.action.TRIGGER"
+    const val ACTION_PRE_NOTIFY = "com.example.dovykhoda.action.PRE_NOTIFY"
+    const val ACTION_LATE = "com.example.dovykhoda.action.LATE"
+    const val ACTION_DEPARTURE_REMINDER = "com.example.dovykhoda.action.DEPARTURE_REMINDER"
+    const val EXTRA_REMINDER_MINUTES = "extra_reminder_minutes"
+    const val EXTRA_TRIGGER_AT = "extra_trigger_at"
+    const val EXTRA_CYCLE_WAKE = "extra_cycle_wake"
+    const val EXTRA_CYCLE_LEAVE = "extra_cycle_leave"
+
+    private const val RC_TRIGGER = 42
+    private const val RC_SHOW_APP = 43
+    private const val RC_PRE_NOTIFY = 44
+    private const val RC_LATE = 100
+    private const val RC_DEPARTURE_REMINDER_BASE = 110
+    private val DEPARTURE_REMINDER_MINUTES = listOf(20, 15, 10, 5, 0)
+    private const val PRE_NOTIFY_LEAD_MS = 12 * 60 * 60 * 1000L
+    private const val TAG = "AlarmScheduler"
+
+    fun canScheduleExact(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return true
+        return context.getSystemService(AlarmManager::class.java).canScheduleExactAlarms()
+    }
+
+    fun reschedule(
+        context: Context,
+        settings: AlarmSettings,
+        fromMillis: Long = System.currentTimeMillis(),
+        recoverLate: Boolean = true,
+    ) {
+        cancelAll(context)
+        if (!settings.enabled) {
+            AlarmLog.event("reschedule_skipped", "reason" to "disabled")
+            StatusNotifier.cancel(context)
+            return
+        }
+
+        val store = SettingsStore(context)
+        val active = store.activeCycle()
+        AlarmLog.event(
+            "reschedule",
+            "from" to AlarmLog.formatTime(fromMillis),
+            "wake" to settings.wakeLabel,
+            "leave" to settings.leaveLabel,
+            "enabled" to settings.enabled,
+            "exactAllowed" to canScheduleExact(context),
+            "activeWake" to active?.let { AlarmLog.formatTime(it.wakeMillis) },
+            "activeLeave" to active?.let { AlarmLog.formatTime(it.leaveMillis) },
+            "remindersOnly" to active?.remindersOnly,
+            "recoverLate" to recoverLate,
+            "ringing" to AlarmService.isRinging,
+        )
+        if (active?.remindersOnly == true &&
+            fromMillis > active.leaveMillis + 5_000L
+        ) {
+            AlarmLog.event("reminders_expired", "leave" to AlarmLog.formatTime(active.leaveMillis))
+            store.save(settings.copy(enabled = false))
+            store.clearActiveCycle()
+            AlarmService.disable(context)
+            StatusNotifier.cancel(context)
+            return
+        }
+        if (active?.remindersOnly == true) {
+            val windowStart = active.leaveMillis - 20 * 60_000L
+            if (fromMillis < windowStart) {
+                val at = maxOf(fromMillis + 1_000L, windowStart)
+                AlarmLog.event("schedule_departure_window_recovery", "at" to AlarmLog.formatTime(at))
+                scheduleAt(context,
+                    SchedulePlanner.ScheduledTrigger(at, active.wakeMillis, active.leaveMillis), ACTION_LATE)
+            } else {
+                scheduleDepartureReminders(context, active)
+            }
+            return
+        }
+        if (active != null && fromMillis >= active.leaveMillis) {
+            if (AlarmService.isRinging) {
+                AlarmLog.event("refresh_reminders", "leave" to AlarmLog.formatTime(active.leaveMillis))
+                AlarmService.refreshReminders(context)
+            } else if (recoverLate) {
+                val at = maxOf(fromMillis + 1_000L, active.leaveMillis)
+                AlarmLog.event("schedule_late_recovery", "at" to AlarmLog.formatTime(at))
+                scheduleAt(context,
+                    SchedulePlanner.ScheduledTrigger(at, active.wakeMillis, active.leaveMillis), ACTION_LATE)
+            }
+            return
+        }
+        scheduleAt(context, SchedulePlanner.nextTrigger(fromMillis, settings))
+        schedulePreNotifyAt(context, settings, SchedulePlanner.nextWakeMillis(fromMillis, settings))
+    }
+
+    /** Schedule each departure prompt as an OS wake-up alarm, not a coroutine timer. */
+    fun scheduleDepartureReminders(context: Context, cycle: SettingsStore.ActiveCycle) {
+        SchedulePlanner.departureReminders(cycle.leaveMillis).forEachIndexed { index, atMillis ->
+            val minutes = DEPARTURE_REMINDER_MINUTES[index]
+            // Keep the firing window tight: alarms already past are missed prompts;
+            // replaying them minutes later risks stale announcements out of order.
+            if (atMillis < System.currentTimeMillis() - 5_000L) return@forEachIndexed
+            val operation = departureReminderIntent(context, cycle.leaveMillis, minutes, atMillis)
+            val manager = context.getSystemService(AlarmManager::class.java)
+            try {
+                if (canScheduleExact(context)) {
+                    // Keep the five prompts distinct on Android versions that coalesce
+                    // ordinary exact alarms while the device is idle.
+                    val showIntent = PendingIntent.getActivity(
+                        context, RC_SHOW_APP, Intent(context, MainActivity::class.java),
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                    )
+                    manager.setAlarmClock(AlarmManager.AlarmClockInfo(atMillis, showIntent), operation)
+                } else {
+                    manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, atMillis, operation)
+                }
+                AlarmLog.event("departure_alarm_set", "minutes" to minutes,
+                    "at" to AlarmLog.formatTime(atMillis), "exact" to canScheduleExact(context))
+            } catch (error: SecurityException) {
+                AlarmLog.failure("departure_alarm_exact_denied", error,
+                    "minutes" to minutes, "at" to AlarmLog.formatTime(atMillis))
+                manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, atMillis, operation)
+            }
+        }
+    }
+
+    fun cancelDepartureReminders(context: Context) {
+        DEPARTURE_REMINDER_MINUTES.forEach { minutes ->
+            context.getSystemService(AlarmManager::class.java).cancel(
+                departureReminderIntent(context, 0L, minutes, 0L))
+        }
+    }
+
+    fun schedulePreNotifyAt(context: Context, settings: AlarmSettings, wakeMillis: Long) {
+        if (!settings.preNotifyEnabled) return
+        val atMillis = wakeMillis - PRE_NOTIFY_LEAD_MS
+        if (atMillis <= System.currentTimeMillis()) {
+            AlarmLog.event("pre_notify_now", "wake" to AlarmLog.formatTime(wakeMillis))
+            StatusNotifier.showScheduled(context, settings, wakeMillis)
+            return
+        }
+        val manager = context.getSystemService(AlarmManager::class.java)
+        val operation = preNotifyIntent(context, wakeMillis)
+        try {
+            if (canScheduleExact(context)) {
+                manager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, atMillis, operation)
+                AlarmLog.event("pre_notify_set", "at" to AlarmLog.formatTime(atMillis), "exact" to true)
+            } else {
+                manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, atMillis, operation)
+                AlarmLog.event("pre_notify_set", "at" to AlarmLog.formatTime(atMillis), "exact" to false)
+            }
+        } catch (error: SecurityException) {
+            Log.w(TAG, "cannot schedule exact pre-notify", error)
+            AlarmLog.failure("pre_notify_exact_denied", error, "at" to AlarmLog.formatTime(atMillis))
+            manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, atMillis, operation)
+        }
+    }
+
+    private fun scheduleAt(
+        context: Context,
+        trigger: SchedulePlanner.ScheduledTrigger,
+        action: String = ACTION_TRIGGER,
+    ) {
+        val manager = context.getSystemService(AlarmManager::class.java)
+        val operation = triggerIntent(context, action, trigger)
+        try {
+            if (canScheduleExact(context)) {
+                val showIntent = PendingIntent.getActivity(
+                    context,
+                    RC_SHOW_APP,
+                    Intent(context, MainActivity::class.java),
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                )
+                manager.setAlarmClock(AlarmManager.AlarmClockInfo(trigger.atMillis, showIntent), operation)
+                AlarmLog.event(
+                    "alarm_set",
+                    "action" to action,
+                    "at" to AlarmLog.formatTime(trigger.atMillis),
+                    "wake" to AlarmLog.formatTime(trigger.cycleWakeMillis),
+                    "leave" to AlarmLog.formatTime(trigger.cycleLeaveMillis),
+                    "exact" to true,
+                    "mode" to "setAlarmClock",
+                    "inMs" to (trigger.atMillis - System.currentTimeMillis()),
+                )
+            } else {
+                manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger.atMillis, operation)
+                AlarmLog.event(
+                    "alarm_set",
+                    "action" to action,
+                    "at" to AlarmLog.formatTime(trigger.atMillis),
+                    "wake" to AlarmLog.formatTime(trigger.cycleWakeMillis),
+                    "leave" to AlarmLog.formatTime(trigger.cycleLeaveMillis),
+                    "exact" to false,
+                    "mode" to "setAndAllowWhileIdle",
+                    "inMs" to (trigger.atMillis - System.currentTimeMillis()),
+                )
+            }
+            Log.d(TAG, "$action scheduled at ${trigger.atMillis}")
+        } catch (error: SecurityException) {
+            Log.w(TAG, "exact alarm not allowed", error)
+            AlarmLog.failure(
+                "alarm_exact_denied", error,
+                "action" to action,
+                "at" to AlarmLog.formatTime(trigger.atMillis),
+            )
+            manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, trigger.atMillis, operation)
+        }
+    }
+
+    fun cancelAll(context: Context) {
+        val manager = context.getSystemService(AlarmManager::class.java)
+        manager.cancel(triggerIntent(context, ACTION_TRIGGER))
+        manager.cancel(triggerIntent(context, ACTION_LATE))
+        manager.cancel(preNotifyIntent(context, 0L))
+        cancelDepartureReminders(context)
+    }
+
+    private fun triggerIntent(
+        context: Context,
+        action: String,
+        trigger: SchedulePlanner.ScheduledTrigger? = null,
+    ): PendingIntent {
+        val intent = Intent(context, AlarmReceiver::class.java).setAction(action)
+        if (trigger != null) {
+            intent.putExtra(EXTRA_TRIGGER_AT, trigger.atMillis)
+                .putExtra(EXTRA_CYCLE_WAKE, trigger.cycleWakeMillis)
+                .putExtra(EXTRA_CYCLE_LEAVE, trigger.cycleLeaveMillis)
+        }
+        return PendingIntent.getBroadcast(
+            context,
+            if (action == ACTION_LATE) RC_LATE else RC_TRIGGER,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+    }
+
+    private fun departureReminderIntent(
+        context: Context, leaveMillis: Long, minutes: Int, triggerMillis: Long,
+    ): PendingIntent {
+        val intent = Intent(context, AlarmReceiver::class.java)
+            .setAction(ACTION_DEPARTURE_REMINDER)
+            .putExtra(EXTRA_CYCLE_LEAVE, leaveMillis)
+            .putExtra(EXTRA_REMINDER_MINUTES, minutes)
+            .putExtra(EXTRA_TRIGGER_AT, triggerMillis)
+        return PendingIntent.getBroadcast(
+            context, RC_DEPARTURE_REMINDER_BASE + DEPARTURE_REMINDER_MINUTES.indexOf(minutes), intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+    }
+
+    private fun preNotifyIntent(context: Context, wakeMillis: Long): PendingIntent {
+        val intent = Intent(context, AlarmReceiver::class.java)
+            .setAction(ACTION_PRE_NOTIFY)
+            .putExtra(StatusNotifier.EXTRA_CYCLE_WAKE, wakeMillis)
+        return PendingIntent.getBroadcast(
+            context,
+            RC_PRE_NOTIFY,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+    }
+}
