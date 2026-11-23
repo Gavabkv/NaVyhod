@@ -100,7 +100,8 @@ class AlarmReceiver : BroadcastReceiver() {
             cycle.leaveMillis == leave && minutes in listOf(20, 15, 10, 5, 0) &&
             at > 0L && kotlin.math.abs(now - at) <= 5 * 60_000L
         AlarmLog.event("departure_alarm_fired", "minutes" to minutes,
-            "at" to AlarmLog.formatTime(at), "lateMs" to (now - at), "valid" to valid)
+            "at" to AlarmLog.formatTime(at), "lateMs" to (now - at), "valid" to valid,
+            "retry" to intent.getBooleanExtra(AlarmScheduler.EXTRA_REMINDER_RETRY, false))
         if (!valid) return
         // Don't reschedule an already-consumed alarm. Service validates the active cycle
         // again before announcing, so stale broadcasts after Stop are harmless.

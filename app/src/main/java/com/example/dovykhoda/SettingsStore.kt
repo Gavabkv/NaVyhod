@@ -142,9 +142,15 @@ class SettingsStore(context: Context) {
     }
 
     fun setActiveCycle(cycle: ActiveCycle) {
-        prefs.edit().putLong(KEY_ACTIVE_WAKE, cycle.wakeMillis)
+        val previous = activeCycle()
+        val editor = prefs.edit()
+            .putLong(KEY_ACTIVE_WAKE, cycle.wakeMillis)
             .putLong(KEY_ACTIVE_LEAVE, cycle.leaveMillis)
-            .putBoolean(KEY_REMINDERS_ONLY, cycle.remindersOnly).apply()
+            .putBoolean(KEY_REMINDERS_ONLY, cycle.remindersOnly)
+        if (previous != null && previous.leaveMillis != cycle.leaveMillis) {
+            editor.remove(spokenKey(previous.leaveMillis))
+        }
+        editor.apply()
         AlarmLog.event(
             "active_cycle_set",
             "wake" to AlarmLog.formatTime(cycle.wakeMillis),
@@ -154,10 +160,33 @@ class SettingsStore(context: Context) {
     }
 
     fun clearActiveCycle() {
-        if (activeCycle() != null) AlarmLog.event("active_cycle_cleared")
-        prefs.edit().remove(KEY_ACTIVE_WAKE).remove(KEY_ACTIVE_LEAVE)
-            .remove(KEY_REMINDERS_ONLY).apply()
+        val cycle = activeCycle()
+        if (cycle != null) AlarmLog.event("active_cycle_cleared")
+        val editor = prefs.edit().remove(KEY_ACTIVE_WAKE).remove(KEY_ACTIVE_LEAVE)
+            .remove(KEY_REMINDERS_ONLY)
+        if (cycle != null) editor.remove(spokenKey(cycle.leaveMillis))
+        editor.apply()
     }
+
+    /**
+     * Какие напоминания о выходе уже озвучены в этом цикле.
+     * Защищает от повторов, когда сигнал приходит и от Exact-будильника,
+     * и от страховочного повтора.
+     */
+    fun spokenDepartureReminders(leaveMillis: Long): Set<Int> =
+        prefs.getStringSet(spokenKey(leaveMillis), emptySet())
+            ?.mapNotNull { it.toIntOrNull() }
+            ?.toSet()
+            .orEmpty()
+
+    fun markDepartureReminderSpoken(leaveMillis: Long, minutes: Int) {
+        val key = spokenKey(leaveMillis)
+        val spoken = prefs.getStringSet(key, emptySet()).orEmpty().toMutableSet()
+        if (!spoken.add(minutes.toString())) return
+        prefs.edit().putStringSet(key, spoken).apply()
+    }
+
+    private fun spokenKey(leaveMillis: Long) = KEY_DEPARTURE_SPOKEN + leaveMillis
 
     /** Для какого цикла (момент пробуждения) пользователь смахнул уведомление. */
     fun preNotifyDismissedCycle(): Long = prefs.getLong(KEY_PRE_DISMISSED_CYCLE, 0L)
@@ -191,5 +220,6 @@ class SettingsStore(context: Context) {
         const val KEY_ACTIVE_WAKE = "active_cycle_wake"
         const val KEY_ACTIVE_LEAVE = "active_cycle_leave"
         const val KEY_REMINDERS_ONLY = "reminders_only"
+        const val KEY_DEPARTURE_SPOKEN = "departure_spoken_"
     }
 }

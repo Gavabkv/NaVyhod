@@ -369,13 +369,25 @@ class AlarmLifecycleTest {
         AlarmScheduler.scheduleDepartureReminders(context, store.activeCycle()!!)
         val manager = shadowOf(context.getSystemService(AlarmManager::class.java))
         val alarms = manager.scheduledAlarms.filter {
-            shadowOf(it.operation).savedIntent.action == AlarmScheduler.ACTION_DEPARTURE_REMINDER
+            val saved = shadowOf(it.operation).savedIntent
+            saved.action == AlarmScheduler.ACTION_DEPARTURE_REMINDER &&
+                !saved.getBooleanExtra(AlarmScheduler.EXTRA_REMINDER_RETRY, false)
         }.sortedBy { it.triggerAtMs }
         assertEquals(listOf(20, 15, 10, 5, 0), alarms.map {
             shadowOf(it.operation).savedIntent.getIntExtra(AlarmScheduler.EXTRA_REMINDER_MINUTES, -1)
         })
         assertEquals(listOf(leave - 20 * 60_000L, leave - 15 * 60_000L, leave - 10 * 60_000L,
             leave - 5 * 60_000L, leave), alarms.map { it.triggerAtMs })
+        val retries = manager.scheduledAlarms.filter {
+            val saved = shadowOf(it.operation).savedIntent
+            saved.action == AlarmScheduler.ACTION_DEPARTURE_REMINDER &&
+                saved.getBooleanExtra(AlarmScheduler.EXTRA_REMINDER_RETRY, false)
+        }.sortedBy { it.triggerAtMs }
+        assertEquals(listOf(20, 15, 10, 5, 0), retries.map {
+            shadowOf(it.operation).savedIntent.getIntExtra(AlarmScheduler.EXTRA_REMINDER_MINUTES, -1)
+        })
+        assertEquals(listOf(leave - 20 * 60_000L, leave - 15 * 60_000L, leave - 10 * 60_000L,
+            leave - 5 * 60_000L, leave).map { it + 30_000L }, retries.map { it.triggerAtMs })
     }
 
     @Test
@@ -405,7 +417,9 @@ class AlarmLifecycleTest {
         }
         assertEquals(leave - 20 * 60_000L, recovery.triggerAtMs)
         val reminderAlarms = manager.scheduledAlarms.filter {
-            shadowOf(it.operation).savedIntent.action == AlarmScheduler.ACTION_DEPARTURE_REMINDER
+            val saved = shadowOf(it.operation).savedIntent
+            saved.action == AlarmScheduler.ACTION_DEPARTURE_REMINDER &&
+                !saved.getBooleanExtra(AlarmScheduler.EXTRA_REMINDER_RETRY, false)
         }
         assertEquals(listOf(20, 15, 10, 5, 0), reminderAlarms.map {
             shadowOf(it.operation).savedIntent.getIntExtra(AlarmScheduler.EXTRA_REMINDER_MINUTES, -1)
@@ -616,9 +630,67 @@ class AlarmLifecycleTest {
         controller = null
         assertEquals(active, store.activeCycle())
         val restarted = service()
-        assertEquals(Service.START_NOT_STICKY, restarted.onStartCommand(null, 0, 1))
+        assertEquals(Service.START_STICKY, restarted.onStartCommand(null, 0, 1))
         assertEquals(listOf(SpeechText.departure(15)), deliverDepartureReminder(restarted, 15))
         assertNull(playerField.get(restarted))
+    }
+
+    @Test
+    fun `spoken departure reminder is not repeated by the retry alarm`() {
+        val store = SettingsStore(context)
+        store.save(settings())
+        val alarm = service()
+        startBeforeDeparture(alarm, 20)
+        alarm.onStartCommand(Intent(context, AlarmService::class.java)
+            .setAction(AlarmService.ACTION_REMIND_ONLY), 0, 2)
+        assertEquals(listOf(SpeechText.departure(15)), deliverDepartureReminder(alarm, 15))
+        // Страховочный будильник через 30 секунд будит тот же живой процесс.
+        assertEquals(listOf(SpeechText.departure(15)), deliverDepartureReminder(alarm, 15))
+        assertEquals(setOf(15), store.spokenDepartureReminders(store.activeCycle()!!.leaveMillis))
+    }
+
+    @Test
+    fun `spoken departure reminder survives service recreation`() {
+        val store = SettingsStore(context)
+        store.save(settings())
+        val leave = System.currentTimeMillis() + 15 * 60_000L
+        store.setActiveCycle(SettingsStore.ActiveCycle(leave - 90 * 60_000L, leave, true))
+        val first = service()
+        assertEquals(listOf(SpeechText.departure(15)), deliverDepartureReminder(first, 15))
+        controller?.destroy()
+        controller = null
+        val restarted = service()
+        restarted.onStartCommand(null, 0, 1)
+        assertEquals(listOf(SpeechText.departure(15)), deliverDepartureReminder(restarted, 15))
+    }
+
+    @Test
+    fun `announced reminder keeps a foreground standby instead of stopping the service`() {
+        val store = SettingsStore(context)
+        store.save(settings())
+        val alarm = service()
+        startBeforeDeparture(alarm, 20)
+        alarm.onStartCommand(Intent(context, AlarmService::class.java)
+            .setAction(AlarmService.ACTION_REMIND_ONLY), 0, 2)
+        assertEquals(listOf(SpeechText.departure(15)), deliverDepartureReminder(alarm, 15))
+        assertFalse(AlarmService.isRinging)
+        assertFalse(shadowOf(alarm).isStoppedBySelf)
+        assertFalse(shadowOf(alarm).isForegroundStopped)
+        assertEquals(StatusNotifier.NOTIFICATION_ID, shadowOf(alarm).lastForegroundNotificationId)
+    }
+
+    @Test
+    fun `departure reminder becomes foreground before any settings are applied`() {
+        val alarm = service()
+        val leave = System.currentTimeMillis() + 15 * 60_000L
+        assertEquals(Service.START_NOT_STICKY, alarm.onStartCommand(Intent(context, AlarmService::class.java)
+            .setAction(AlarmService.ACTION_DEPARTURE_REMINDER)
+            .putExtra(AlarmScheduler.EXTRA_CYCLE_LEAVE, leave)
+            .putExtra(AlarmScheduler.EXTRA_REMINDER_MINUTES, 15)
+            .putExtra(AlarmScheduler.EXTRA_TRIGGER_AT, System.currentTimeMillis()), 0, 1))
+        assertEquals(StatusNotifier.NOTIFICATION_ID, shadowOf(alarm).lastForegroundNotificationId)
+        assertTrue(shadowOf(alarm).isStoppedBySelf)
+        assertNull(ShadowTextToSpeech.getLastTextToSpeechInstance())
     }
 
     @Test

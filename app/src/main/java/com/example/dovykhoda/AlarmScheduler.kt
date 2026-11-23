@@ -13,6 +13,7 @@ object AlarmScheduler {
     const val ACTION_LATE = "com.example.dovykhoda.action.LATE"
     const val ACTION_DEPARTURE_REMINDER = "com.example.dovykhoda.action.DEPARTURE_REMINDER"
     const val EXTRA_REMINDER_MINUTES = "extra_reminder_minutes"
+    const val EXTRA_REMINDER_RETRY = "extra_reminder_retry"
     const val EXTRA_TRIGGER_AT = "extra_trigger_at"
     const val EXTRA_CYCLE_WAKE = "extra_cycle_wake"
     const val EXTRA_CYCLE_LEAVE = "extra_cycle_leave"
@@ -22,7 +23,10 @@ object AlarmScheduler {
     private const val RC_PRE_NOTIFY = 44
     private const val RC_LATE = 100
     private const val RC_DEPARTURE_REMINDER_BASE = 110
+    private const val RC_DEPARTURE_RETRY_BASE = 120
     private val DEPARTURE_REMINDER_MINUTES = listOf(20, 15, 10, 5, 0)
+    /** Страховочный повтор: если процесс убит ровно в момент сигнала. */
+    private const val DEPARTURE_RETRY_DELAY_MS = 30_000L
     private const val PRE_NOTIFY_LEAD_MS = 12 * 60 * 60 * 1000L
     private const val TAG = "AlarmScheduler"
 
@@ -104,34 +108,51 @@ object AlarmScheduler {
             // Keep the firing window tight: alarms already past are missed prompts;
             // replaying them minutes later risks stale announcements out of order.
             if (atMillis < System.currentTimeMillis() - 5_000L) return@forEachIndexed
-            val operation = departureReminderIntent(context, cycle.leaveMillis, minutes, atMillis)
-            val manager = context.getSystemService(AlarmManager::class.java)
-            try {
-                if (canScheduleExact(context)) {
-                    // Keep the five prompts distinct on Android versions that coalesce
-                    // ordinary exact alarms while the device is idle.
-                    val showIntent = PendingIntent.getActivity(
-                        context, RC_SHOW_APP, Intent(context, MainActivity::class.java),
-                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-                    )
-                    manager.setAlarmClock(AlarmManager.AlarmClockInfo(atMillis, showIntent), operation)
-                } else {
-                    manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, atMillis, operation)
-                }
-                AlarmLog.event("departure_alarm_set", "minutes" to minutes,
-                    "at" to AlarmLog.formatTime(atMillis), "exact" to canScheduleExact(context))
-            } catch (error: SecurityException) {
-                AlarmLog.failure("departure_alarm_exact_denied", error,
-                    "minutes" to minutes, "at" to AlarmLog.formatTime(atMillis))
+            scheduleDepartureAlarm(context, cycle.leaveMillis, minutes, atMillis, retry = false)
+            // Второй сигнал через 30 секунд страхует случай, когда процесс приложения
+            // убит прямо в момент первого. Повтор уже озвученного отсекается журналом.
+            scheduleDepartureAlarm(context, cycle.leaveMillis, minutes,
+                atMillis + DEPARTURE_RETRY_DELAY_MS, retry = true)
+        }
+    }
+
+    private fun scheduleDepartureAlarm(
+        context: Context,
+        leaveMillis: Long,
+        minutes: Int,
+        atMillis: Long,
+        retry: Boolean,
+    ) {
+        val operation = departureReminderIntent(context, leaveMillis, minutes, atMillis, retry)
+        val manager = context.getSystemService(AlarmManager::class.java)
+        try {
+            if (canScheduleExact(context)) {
+                // Keep the five prompts distinct on Android versions that coalesce
+                // ordinary exact alarms while the device is idle.
+                val showIntent = PendingIntent.getActivity(
+                    context, RC_SHOW_APP, Intent(context, MainActivity::class.java),
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+                )
+                manager.setAlarmClock(AlarmManager.AlarmClockInfo(atMillis, showIntent), operation)
+            } else {
                 manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, atMillis, operation)
             }
+            AlarmLog.event("departure_alarm_set", "minutes" to minutes,
+                "at" to AlarmLog.formatTime(atMillis), "exact" to canScheduleExact(context),
+                "retry" to retry)
+        } catch (error: SecurityException) {
+            AlarmLog.failure("departure_alarm_exact_denied", error,
+                "minutes" to minutes, "at" to AlarmLog.formatTime(atMillis), "retry" to retry)
+            manager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, atMillis, operation)
         }
     }
 
     fun cancelDepartureReminders(context: Context) {
         DEPARTURE_REMINDER_MINUTES.forEach { minutes ->
             context.getSystemService(AlarmManager::class.java).cancel(
-                departureReminderIntent(context, 0L, minutes, 0L))
+                departureReminderIntent(context, 0L, minutes, 0L, retry = false))
+            context.getSystemService(AlarmManager::class.java).cancel(
+                departureReminderIntent(context, 0L, minutes, 0L, retry = true))
         }
     }
 
@@ -239,15 +260,21 @@ object AlarmScheduler {
     }
 
     private fun departureReminderIntent(
-        context: Context, leaveMillis: Long, minutes: Int, triggerMillis: Long,
+        context: Context,
+        leaveMillis: Long,
+        minutes: Int,
+        triggerMillis: Long,
+        retry: Boolean,
     ): PendingIntent {
         val intent = Intent(context, AlarmReceiver::class.java)
             .setAction(ACTION_DEPARTURE_REMINDER)
             .putExtra(EXTRA_CYCLE_LEAVE, leaveMillis)
             .putExtra(EXTRA_REMINDER_MINUTES, minutes)
             .putExtra(EXTRA_TRIGGER_AT, triggerMillis)
+            .putExtra(EXTRA_REMINDER_RETRY, retry)
+        val base = if (retry) RC_DEPARTURE_RETRY_BASE else RC_DEPARTURE_REMINDER_BASE
         return PendingIntent.getBroadcast(
-            context, RC_DEPARTURE_REMINDER_BASE + DEPARTURE_REMINDER_MINUTES.indexOf(minutes), intent,
+            context, base + DEPARTURE_REMINDER_MINUTES.indexOf(minutes), intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
     }

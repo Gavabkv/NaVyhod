@@ -105,6 +105,21 @@ object StatusNotifier {
             .build()
     }
 
+    /**
+     * Заглушка на первые миллисекунды жизни foreground-сервиса:
+     * системное уведомление показывается до чтения настроек и построения
+     * настоящего уведомления, чтобы не попасть под таймаут startForeground().
+     */
+    fun buildStarting(context: Context): Notification {
+        ensureChannels(context)
+        return baseBuilder(context)
+            .setContentTitle("На выход")
+            .setContentText("Подготовка сигнала…")
+            .setAutoCancel(false)
+            .setOngoing(true)
+            .build()
+    }
+
     fun buildReminders(context: Context, leaveMillis: Long): Notification {
         ensureChannels(context)
         val leave = java.time.Instant.ofEpochMilli(leaveMillis)

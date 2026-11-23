@@ -50,6 +50,7 @@ class AlarmService : Service() {
     private var testMode = false
     private var lastLateMinutes = 0
     private var sessionCycle: SettingsStore.ActiveCycle? = null
+    private val announcingReminders = mutableSetOf<Int>()
 
     override fun onCreate() {
         super.onCreate()
@@ -68,6 +69,7 @@ class AlarmService : Service() {
             "startedRinging" to isRinging,
             "test" to intent?.getBooleanExtra(EXTRA_TEST, false),
         )
+        ensureForeground(intent)
         when (intent?.action) {
             ACTION_TRIGGER -> startAlarm(intent)
             ACTION_SILENCE -> finishRing()
@@ -93,7 +95,37 @@ class AlarmService : Service() {
             ACTION_REFRESH, null -> resumeReminders()
             else -> stopSelf()
         }
-        return if (!testMode && lateJob?.isActive == true) START_STICKY else START_NOT_STICKY
+        return if (!testMode && (lateJob?.isActive == true || reminderStandbyActive())) {
+            START_STICKY
+        } else {
+            START_NOT_STICKY
+        }
+    }
+
+    /**
+     * Android даёт около десяти секунд на startForeground() после
+     * startForegroundService(). Уведомление показывается раньше чтения
+     * настроек: если дальше систему заклинит, сервис всё равно успеет
+     * стать foreground и не будет убит по таймауту.
+     */
+    private fun ensureForeground(intent: Intent?) {
+        if (foregroundStarted) return
+        val notification = when (intent?.action) {
+            ACTION_DEPARTURE_REMINDER -> {
+                val leave = intent.getLongExtra(AlarmScheduler.EXTRA_CYCLE_LEAVE, 0L)
+                if (leave > 0L) StatusNotifier.buildReminders(this, leave)
+                else StatusNotifier.buildStarting(this)
+            }
+            ACTION_TRIGGER, ACTION_LATE, ACTION_REMIND_ONLY, null -> StatusNotifier.buildStarting(this)
+            else -> return
+        }
+        startForegroundNow(notification, ringing = false)
+    }
+
+    /** Напоминания идут прямо сейчас: сервис держит foreground до момента выхода. */
+    private fun reminderStandbyActive(): Boolean {
+        val cycle = sessionCycle ?: return false
+        return cycle.remindersOnly && System.currentTimeMillis() <= cycle.leaveMillis + 5_000L
     }
 
     override fun onBind(intent: Intent?) = null
@@ -281,27 +313,46 @@ class AlarmService : Service() {
             AlarmLog.event("departure_reminder_ignored", "minutes" to minutes,
                 "leave" to AlarmLog.formatTime(leaveMillis), "activeLeave" to cycle?.leaveMillis)
             if (cycle?.remindersOnly == true && now > cycle.leaveMillis + 5_000L) handleStopAlarm()
-            else if (!isRinging) stopSelf()
+            else if (!isRinging && !reminderStandbyActive()) {
+                stopForegroundNow()
+                stopSelf()
+            }
+            return
+        }
+        val announcing = minutes in announcingReminders
+        if (announcing || store.spokenDepartureReminders(leaveMillis).contains(minutes)) {
+            // Страховочный повтор или повторная доставка после перезапуска:
+            // этот сигнал уже звучит или уже прозвучал.
+            AlarmLog.event("departure_reminder_duplicate", "minutes" to minutes,
+                "announcing" to announcing)
             return
         }
         sessionCycle = cycle
         testMode = false
         isRinging = true
+        announcingReminders += minutes
         startForegroundNow(StatusNotifier.buildReminders(this, leaveMillis), ringing = false)
         acquireWakeLock()
         AlarmLog.event("departure_reminder", "minutes" to minutes,
             "due" to AlarmLog.formatTime(atMillis), "lateMs" to (now - atMillis))
         scope.launch {
-            val announce = store.load().announceTimeOnDeparture
-            speakReminder(SpeechText.departure(minutes), announceTime = announce)
-            if (minutes == 0) {
-                AlarmScheduler.cancelDepartureReminders(this@AlarmService)
-                handleStopAlarm()
-            } else {
-                releaseAll()
-                isRinging = false
-                stopForegroundNow()
-                stopSelf()
+            try {
+                val announce = store.load().announceTimeOnDeparture
+                speakReminder(SpeechText.departure(minutes), announceTime = announce)
+                store.markDepartureReminderSpoken(leaveMillis, minutes)
+                if (minutes == 0) {
+                    AlarmScheduler.cancelDepartureReminders(this@AlarmService)
+                    handleStopAlarm()
+                } else {
+                    releaseAll()
+                    isRinging = false
+                    // Не останавливаем сервис: следующий сигнал придёт в уже живой
+                    // foreground-процесс, без старта сервиса из фона.
+                    AlarmLog.event("reminder_standby", "minutes" to minutes,
+                        "leave" to AlarmLog.formatTime(leaveMillis))
+                }
+            } finally {
+                announcingReminders -= minutes
             }
         }
     }
@@ -364,11 +415,9 @@ class AlarmService : Service() {
             lateJob?.cancel()
             lateJob = null
             releaseAll()
-            // While waiting for the first OS alarm, stop this service instance. The
-            // individual alarms must be able to restart it even if a previous session
-            // left a cancelled coroutine or foreground state behind.
+            // Держим foreground-сеанс до последнего напоминания: система с меньшей
+            // вероятностью убьёт живой процесс, а сигналы придут уже в него.
             isRinging = false
-            stopForegroundNow()
             AlarmLog.event("departure_alarms_armed", "leave" to AlarmLog.formatTime(cycle.leaveMillis))
             return
         }
@@ -686,12 +735,17 @@ class AlarmService : Service() {
         stopForegroundNow()
         if (ringing) StatusNotifier.cancelStatus(this)
         val id = if (ringing) StatusNotifier.RING_NOTIFICATION_ID else StatusNotifier.NOTIFICATION_ID
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            startForeground(id, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
-        } else {
-            startForeground(id, notification)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(id, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK)
+            } else {
+                startForeground(id, notification)
+            }
+            foregroundStarted = true
+        } catch (error: Exception) {
+            Log.e(TAG, "cannot start foreground", error)
+            AlarmLog.failure("foreground_start_failed", error, "ringing" to ringing)
         }
-        foregroundStarted = true
     }
 
     private fun stopForegroundNow() {
