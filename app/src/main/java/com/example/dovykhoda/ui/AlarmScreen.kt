@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -51,6 +52,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
@@ -98,6 +100,7 @@ fun AlarmScreen(
 
     var settings by remember { mutableStateOf(store.load()) }
     var timeTarget by remember { mutableStateOf<TimeTarget?>(null) }
+    var pendingDisable by remember { mutableStateOf(false) }
     var nowMillis by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var exactAlarmsAllowed by remember { mutableStateOf(AlarmScheduler.canScheduleExact(context)) }
     var notificationsAllowed by remember {
@@ -201,7 +204,9 @@ fun AlarmScreen(
             EnabledCard(
                 settings = settings,
                 remindersActive = remindersActive,
-                onToggle = { update(settings.copy(enabled = it)) },
+                onToggle = { enabled ->
+                    if (enabled) update(settings.copy(enabled = true)) else pendingDisable = true
+                },
                 onRequestStop = {
                     context.startActivity(Intent(context, AlarmRingingActivity::class.java)
                         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
@@ -215,19 +220,20 @@ fun AlarmScreen(
                 TimeTile(
                     label = "Пробуждение",
                     value = settings.wakeLabel,
-                    enabled = !settings.departureTimeOnly,
+                    enabled = settings.enabled && !settings.departureTimeOnly,
                     modifier = Modifier.weight(1f).testTag("wake_time"),
                     onClick = { timeTarget = TimeTarget.WAKE },
                 )
                 TimeTile(
                     label = "Выход",
                     value = settings.leaveLabel,
+                    enabled = settings.enabled,
                     modifier = Modifier.weight(1f).testTag("leave_time"),
                     onClick = { timeTarget = TimeTarget.LEAVE },
                 )
             }
 
-            SettingsCard(title = "Настройка времени") {
+            SettingsCard(title = "Настройка времени", enabled = settings.enabled) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = "Задавать только время выхода",
@@ -237,12 +243,14 @@ fun AlarmScreen(
                     Switch(
                         checked = settings.departureTimeOnly,
                         onCheckedChange = { update(settings.withDepartureTimeOnly(it)) },
+                        enabled = settings.enabled,
                         modifier = Modifier.testTag("departure_time_only"),
                     )
                 }
                 PreparationTimeSlider(
                     minutes = settings.preparationMinutes,
                     departureTimeOnly = settings.departureTimeOnly,
+                    enabled = settings.enabled,
                     onChange = { update(settings.withPreparationMinutes(it)) },
                 )
             }
@@ -250,12 +258,14 @@ fun AlarmScreen(
             SettingsCard(
                 title = "Интервал музыки",
                 subtitle = "Первый сигнал — в момент пробуждения",
+                enabled = settings.enabled,
             ) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf(5, 10).forEach { minutes ->
                         FilterChip(
                             selected = settings.intervalMinutes == minutes,
                             onClick = { update(settings.copy(intervalMinutes = minutes)) },
+                            enabled = settings.enabled,
                             label = { Text("Каждые $minutes мин") },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -269,6 +279,7 @@ fun AlarmScreen(
             SettingsCard(
                 title = "Голос",
                 subtitle = "Системный синтез речи (TTS), по-русски",
+                enabled = settings.enabled,
             ) {
                 Text(
                     text = "Говорить текущее время",
@@ -285,24 +296,28 @@ fun AlarmScreen(
                     label = "В сигналах будильника",
                     checked = settings.announceTimeOnSignals,
                     tag = "time_signals",
+                    enabled = settings.enabled,
                     onCheckedChange = { update(settings.copy(announceTimeOnSignals = it)) },
                 )
                 TimeToggleRow(
                     label = "В напоминаниях о выходе",
                     checked = settings.announceTimeOnDeparture,
                     tag = "time_departure",
+                    enabled = settings.enabled,
                     onCheckedChange = { update(settings.copy(announceTimeOnDeparture = it)) },
                 )
                 TimeToggleRow(
                     label = "В напоминаниях об опоздании",
                     checked = settings.announceTimeOnLate,
                     tag = "time_late",
+                    enabled = settings.enabled,
                     onCheckedChange = { update(settings.copy(announceTimeOnLate = it)) },
                 )
 
                 HorizontalDivider()
                 LeadTimeSlider(
                     leadMinutes = settings.ttsLeadMinutes,
+                    enabled = settings.enabled,
                     onChange = { update(settings.copy(ttsLeadMinutes = it)) },
                 )
                 Text(
@@ -313,15 +328,17 @@ fun AlarmScreen(
                 )
             }
 
-            SettingsCard(title = "Длительность сигнала") {
+            SettingsCard(title = "Длительность сигнала", enabled = settings.enabled) {
                 RingDurationSlider(
                     seconds = settings.ringSeconds,
+                    enabled = settings.enabled,
                     onChange = { update(settings.copy(ringSeconds = it)) },
                 )
             }
 
             NotificationsCard(
                 settings = settings,
+                enabled = settings.enabled,
                 onToggle = { update(settings.copy(preNotifyEnabled = it)) },
             )
 
@@ -386,6 +403,30 @@ fun AlarmScreen(
             },
         )
     }
+
+    if (pendingDisable) {
+        AlertDialog(
+            onDismissRequest = { pendingDisable = false },
+            title = { Text("Выключить будильник?") },
+            text = {
+                Text(
+                    "Сигналы и напоминания не прозвучат, пока расписание выключено. " +
+                        "Время и настройки сохранятся — включить можно этим же переключателем."
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pendingDisable = false
+                        update(settings.copy(enabled = false))
+                    },
+                ) { Text("Выключить") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDisable = false }) { Text("Отмена") }
+            },
+        )
+    }
 }
 
 // ------------------------------------------------------------------ карточки
@@ -410,12 +451,23 @@ private fun EnabledCard(
                     .padding(horizontal = 18.dp, vertical = 16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = if (settings.enabled) "Будильник включен" else "Будильник выключен",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.weight(1f),
-                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = if (settings.enabled) "Будильник включен" else "Будильник выключен",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    if (!settings.enabled) {
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = "Настройки ниже заблокированы. Включите переключатель, " +
+                                "чтобы менять время и сигналы.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                Spacer(Modifier.width(12.dp))
                 Switch(
                     checked = settings.enabled,
                     onCheckedChange = onToggle,
@@ -445,7 +497,9 @@ private fun TimeTile(
     onClick: () -> Unit,
 ) {
     Card(
-        modifier = modifier.clickable(enabled = enabled, onClick = onClick),
+        modifier = modifier
+            .alpha(if (enabled) 1f else 0.6f)
+            .clickable(enabled = enabled, onClick = onClick),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
         ),
@@ -471,12 +525,14 @@ private fun TimeTile(
 private fun SettingsCard(
     title: String,
     subtitle: String? = null,
+    enabled: Boolean = true,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Card {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .alpha(if (enabled) 1f else 0.45f)
                 .padding(18.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
@@ -502,6 +558,7 @@ private fun TimeToggleRow(
     label: String,
     checked: Boolean,
     tag: String,
+    enabled: Boolean = true,
     onCheckedChange: (Boolean) -> Unit,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -513,13 +570,14 @@ private fun TimeToggleRow(
         Switch(
             checked = checked,
             onCheckedChange = onCheckedChange,
+            enabled = enabled,
             modifier = Modifier.testTag(tag),
         )
     }
 }
 
 @Composable
-private fun LeadTimeSlider(leadMinutes: Int, onChange: (Int) -> Unit) {
+private fun LeadTimeSlider(leadMinutes: Int, enabled: Boolean = true, onChange: (Int) -> Unit) {
     var value by remember(leadMinutes) { mutableFloatStateOf(leadMinutes.toFloat()) }
     val shown = snapToStep(value, step = 5, min = 0, max = 90)
     Text(
@@ -532,6 +590,7 @@ private fun LeadTimeSlider(leadMinutes: Int, onChange: (Int) -> Unit) {
         onValueChange = { value = it },
         valueRange = 0f..90f,
         steps = 17,
+        enabled = enabled,
         onValueChangeFinished = { onChange(snapToStep(value, step = 5, min = 0, max = 90)) },
     )
 }
@@ -540,6 +599,7 @@ private fun LeadTimeSlider(leadMinutes: Int, onChange: (Int) -> Unit) {
 private fun PreparationTimeSlider(
     minutes: Int,
     departureTimeOnly: Boolean,
+    enabled: Boolean = true,
     onChange: (Int) -> Unit,
 ) {
     var value by remember(minutes) { mutableFloatStateOf(minutes.toFloat()) }
@@ -562,6 +622,7 @@ private fun PreparationTimeSlider(
         onValueChange = { value = it },
         valueRange = 40f..150f,
         steps = 21,
+        enabled = enabled,
         onValueChangeFinished = { onChange(snapToStep(value, step = 5, min = 40, max = 150)) },
         modifier = Modifier.testTag("preparation_minutes"),
     )
@@ -569,7 +630,7 @@ private fun PreparationTimeSlider(
 }
 
 @Composable
-private fun RingDurationSlider(seconds: Int, onChange: (Int) -> Unit) {
+private fun RingDurationSlider(seconds: Int, enabled: Boolean = true, onChange: (Int) -> Unit) {
     var value by remember(seconds) { mutableFloatStateOf(seconds.toFloat()) }
     val shown = snapToStep(value, step = 10, min = 20, max = 60)
     Text(
@@ -581,6 +642,7 @@ private fun RingDurationSlider(seconds: Int, onChange: (Int) -> Unit) {
         onValueChange = { value = it },
         valueRange = 20f..60f,
         steps = 3,
+        enabled = enabled,
         onValueChangeFinished = { onChange(snapToStep(value, step = 10, min = 20, max = 60)) },
         modifier = Modifier.testTag("ring_seconds"),
     )
@@ -668,10 +730,15 @@ private fun StatusCard(
 }
 
 @Composable
-private fun NotificationsCard(settings: AlarmSettings, onToggle: (Boolean) -> Unit) {
+private fun NotificationsCard(
+    settings: AlarmSettings,
+    enabled: Boolean = true,
+    onToggle: (Boolean) -> Unit,
+) {
     SettingsCard(
         title = "Уведомление",
         subtitle = "«Будильник заведён» появляется за 12 часов и висит до конца цикла",
+        enabled = enabled,
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -689,6 +756,7 @@ private fun NotificationsCard(settings: AlarmSettings, onToggle: (Boolean) -> Un
             Switch(
                 checked = settings.preNotifyEnabled,
                 onCheckedChange = onToggle,
+                enabled = enabled,
             )
         }
     }

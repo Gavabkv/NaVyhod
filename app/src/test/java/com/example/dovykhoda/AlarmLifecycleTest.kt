@@ -166,7 +166,8 @@ class AlarmLifecycleTest {
         assertEquals("NaVykhod:screen", shadowOf(screenLock).tag)
         assertTrue(screenLock.isHeld)
         alarm.onStartCommand(Intent(context, AlarmService::class.java)
-            .setAction(AlarmService.ACTION_STOP_ALL), 0, 2)
+            .setAction(AlarmService.ACTION_STOP_ALL)
+            .putExtra(AlarmService.EXTRA_CONFIRMED_STOP, true), 0, 2)
         assertFalse(screenLock.isHeld)
     }
 
@@ -212,7 +213,8 @@ class AlarmLifecycleTest {
         assertEquals(List(3) { SpeechText.late(1) }, completeSpeech(repeats = 3))
         assertTrue(AlarmService.isRinging)
         alarm.onStartCommand(Intent(context, AlarmService::class.java)
-            .setAction(AlarmService.ACTION_STOP_ALL), 0, 2)
+            .setAction(AlarmService.ACTION_STOP_ALL)
+            .putExtra(AlarmService.EXTRA_CONFIRMED_STOP, true), 0, 2)
     }
 
     @Test
@@ -264,7 +266,8 @@ class AlarmLifecycleTest {
             assertTrue(ShadowPowerManager.getLatestWakeLock().isHeld)
         }
         alarm.onStartCommand(Intent(context, AlarmService::class.java)
-            .setAction(AlarmService.ACTION_STOP_ALL), 0, 2)
+            .setAction(AlarmService.ACTION_STOP_ALL)
+            .putExtra(AlarmService.EXTRA_CONFIRMED_STOP, true), 0, 2)
         assertFalse(AlarmService.isRinging)
         assertNull(SettingsStore(context).activeCycle())
         assertFalse(ShadowPowerManager.getLatestWakeLock().isHeld)
@@ -301,7 +304,8 @@ class AlarmLifecycleTest {
         val tts = shadowOf(ShadowTextToSpeech.getLastTextToSpeechInstance())
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(1))
         alarm.onStartCommand(Intent(context, AlarmService::class.java)
-            .setAction(AlarmService.ACTION_STOP_ALL), 0, 2)
+            .setAction(AlarmService.ACTION_STOP_ALL)
+            .putExtra(AlarmService.EXTRA_CONFIRMED_STOP, true), 0, 2)
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(10))
         assertEquals(listOf(SpeechText.late(1)), tts.spokenTextList)
         assertFalse(store.load().enabled)
@@ -557,7 +561,8 @@ class AlarmLifecycleTest {
         alarm.onStartCommand(Intent(context, AlarmService::class.java)
             .setAction(AlarmService.ACTION_REMIND_ONLY), 0, 2)
         alarm.onStartCommand(Intent(context, AlarmService::class.java)
-            .setAction(AlarmService.ACTION_STOP_ALL), 0, 3)
+            .setAction(AlarmService.ACTION_STOP_ALL)
+            .putExtra(AlarmService.EXTRA_CONFIRMED_STOP, true), 0, 3)
         assertNull(store.activeCycle())
         assertFalse(store.load().enabled)
         store.save(settings())
@@ -565,6 +570,20 @@ class AlarmLifecycleTest {
         store.save(settings().copy(enabled = false))
         assertNull(store.activeCycle())
         assertFalse(store.load().enabled)
+    }
+
+    @Test
+    fun `stop command without confirmation cannot disable the alarm`() {
+        val store = SettingsStore(context)
+        store.save(settings())
+        val alarm = service()
+        startDeparture(alarm)
+        assertTrue(AlarmService.isRinging)
+        alarm.onStartCommand(Intent(context, AlarmService::class.java)
+            .setAction(AlarmService.ACTION_STOP_ALL), 0, 2)
+        assertTrue(AlarmService.isRinging)
+        assertTrue(store.load().enabled)
+        assertTrue(store.activeCycle() != null)
     }
 
     @Test
@@ -626,7 +645,8 @@ class AlarmLifecycleTest {
         val alarm = service()
         val leave = startDeparture(alarm)
         alarm.onStartCommand(Intent(context, AlarmService::class.java)
-            .setAction(AlarmService.ACTION_STOP_ALL), 0, 2)
+            .setAction(AlarmService.ACTION_STOP_ALL)
+            .putExtra(AlarmService.EXTRA_CONFIRMED_STOP, true), 0, 2)
         val stale = Intent(AlarmScheduler.ACTION_LATE)
             .putExtra(AlarmScheduler.EXTRA_TRIGGER_AT, System.currentTimeMillis())
             .putExtra(AlarmScheduler.EXTRA_CYCLE_WAKE, leave - 3_600_000L)
@@ -702,7 +722,8 @@ class AlarmLifecycleTest {
         store.save(settings())
         AlarmScheduler.reschedule(context, store.load())
         service().onStartCommand(Intent(context, AlarmService::class.java)
-            .setAction(AlarmService.ACTION_STOP_ALL), 0, 1)
+            .setAction(AlarmService.ACTION_STOP_ALL)
+            .putExtra(AlarmService.EXTRA_CONFIRMED_STOP, true), 0, 1)
         assertFalse(SettingsStore(context).load().enabled)
         AlarmScheduler.reschedule(context, store.load())
         BootReceiver().onReceive(context, Intent(Intent.ACTION_BOOT_COMPLETED))
@@ -730,7 +751,8 @@ class AlarmLifecycleTest {
         val store = SettingsStore(context)
         store.save(settings())
         service().onStartCommand(Intent(context, AlarmService::class.java)
-            .setAction(AlarmService.ACTION_STOP_ALL), 0, 1)
+            .setAction(AlarmService.ACTION_STOP_ALL)
+            .putExtra(AlarmService.EXTRA_CONFIRMED_STOP, true), 0, 1)
         assertFalse(store.load().enabled)
         val evening = store.load().withWakeTime(18, 0)
         store.save(evening)
@@ -927,7 +949,8 @@ class AlarmLifecycleTest {
         assertEquals(11, window.getIntExtra(AlarmRingingActivity.EXTRA_LATE_MINUTES, 0))
         assertEquals(List(3) { SpeechText.late(11) }, completeSpeech(repeats = 3))
         alarm.onStartCommand(Intent(context, AlarmService::class.java)
-            .setAction(AlarmService.ACTION_STOP_ALL), 0, 3)
+            .setAction(AlarmService.ACTION_STOP_ALL)
+            .putExtra(AlarmService.EXTRA_CONFIRMED_STOP, true), 0, 3)
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMinutes(3))
         assertNull(shadowOf(alarm).nextStartedActivity)
         assertNull(store.activeCycle())
@@ -981,7 +1004,8 @@ class AlarmLifecycleTest {
         alarm.onStartCommand(Intent(context, AlarmService::class.java)
             .setAction(AlarmService.ACTION_TRIGGER).putExtra("extra_test", true), 0, 1)
         alarm.onStartCommand(Intent(context, AlarmService::class.java)
-            .setAction(AlarmService.ACTION_STOP_ALL), 0, 2)
+            .setAction(AlarmService.ACTION_STOP_ALL)
+            .putExtra(AlarmService.EXTRA_CONFIRMED_STOP, true), 0, 2)
         assertFalse(AlarmService.isRinging)
     }
 }

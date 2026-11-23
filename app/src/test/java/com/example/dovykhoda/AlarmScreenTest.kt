@@ -303,7 +303,8 @@ class AlarmScreenTest {
             val alarm = Robolectric.buildService(AlarmService::class.java).create()
             try {
                 alarm.get().onStartCommand(Intent(context, AlarmService::class.java)
-                    .setAction(AlarmService.ACTION_STOP_ALL), 0, 1)
+                    .setAction(AlarmService.ACTION_STOP_ALL)
+                    .putExtra(AlarmService.EXTRA_CONFIRMED_STOP, true), 0, 1)
             } finally {
                 alarm.destroy()
             }
@@ -518,11 +519,44 @@ class AlarmScreenTest {
         val settingsBounds = compose.onNodeWithText("Настройка времени").fetchSemanticsNode().boundsInRoot
         assertEquals(wakeBounds.top, leaveBounds.top)
         assertTrue(wakeBounds.bottom < settingsBounds.top)
-        compose.onNodeWithTag("alarm_enabled").performClick().assertIsOff()
+        compose.onNodeWithTag("alarm_enabled").performClick().assertIsOn()
+        compose.onNodeWithText("Выключить будильник?").assertIsDisplayed()
+        compose.onNodeWithText("Выключить").performClick()
         compose.onNodeWithText("Будильник выключен").assertIsDisplayed()
         compose.runOnIdle { assertFalse(store.load().enabled) }
         compose.onNodeWithTag("alarm_enabled").performClick().assertIsOn()
         compose.onNodeWithText("Будильник включен").assertIsDisplayed()
+        compose.runOnIdle { assertTrue(store.load().enabled) }
+    }
+
+    @Test
+    fun `cancelling the disable dialog keeps the alarm on`() {
+        showScreen()
+        compose.onNodeWithTag("alarm_enabled").performClick().assertIsOn()
+        compose.onNodeWithText("Выключить будильник?").assertIsDisplayed()
+        compose.onNodeWithText("Отмена").performClick()
+        compose.onNodeWithText("Выключить будильник?").assertDoesNotExist()
+        compose.onNodeWithTag("alarm_enabled").assertIsOn()
+        compose.onNodeWithText("Будильник включен").assertIsDisplayed()
+        compose.runOnIdle { assertTrue(store.load().enabled) }
+    }
+
+    @Test
+    fun `disabled schedule greys out and locks settings until enabled again`() {
+        store.save(store.load().copy(enabled = false))
+        showScreen()
+        compose.onNodeWithText("Будильник выключен").assertIsDisplayed()
+        compose.onNodeWithTag("wake_time").assertIsNotEnabled()
+        compose.onNodeWithTag("leave_time").assertIsNotEnabled()
+        compose.onNodeWithTag("departure_time_only").performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithTag("preparation_minutes").performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithTag("ring_seconds").performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithTag("time_signals").performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithTag("time_departure").performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithTag("time_late").performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithTag("alarm_enabled").performScrollTo().assertIsOff().performClick().assertIsOn()
+        compose.onNodeWithTag("wake_time").assertIsEnabled()
+        compose.onNodeWithTag("ring_seconds").performScrollTo().assertIsEnabled()
         compose.runOnIdle { assertTrue(store.load().enabled) }
     }
 

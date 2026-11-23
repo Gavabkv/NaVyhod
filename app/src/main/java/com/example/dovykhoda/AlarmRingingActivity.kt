@@ -42,6 +42,7 @@ class AlarmRingingActivity : ComponentActivity() {
             "ring_screen_create",
             "remaining" to intent?.getIntExtra(EXTRA_REMAINING, -1),
             "late" to intent?.getIntExtra(EXTRA_LATE_MINUTES, 0),
+            "confirmStop" to intent?.getBooleanExtra(EXTRA_CONFIRM_STOP, false),
             "ringing" to AlarmService.isRinging,
             "recreated" to (savedInstanceState != null),
             "locked" to {
@@ -64,9 +65,12 @@ class AlarmRingingActivity : ComponentActivity() {
         if (savedInstanceState != null) {
             remainingMinutes = savedInstanceState.getInt(EXTRA_REMAINING, remainingMinutes)
             lateMinutes = savedInstanceState.getInt(EXTRA_LATE_MINUTES, lateMinutes)
-            confirmation = savedInstanceState.getString(STATE_CONFIRMATION)
+            // Не теряем вопрос из нового интента (например, кнопку «Выключить» в шторке),
+            // если в сохранённом состоянии его не было.
+            savedInstanceState.getString(STATE_CONFIRMATION)
                 ?.let { name -> runCatching { AlarmConfirmation.valueOf(name) }.getOrNull() }
                 ?.takeIf { it != AlarmConfirmation.RemindDeparture || lateMinutes <= 0 }
+                ?.let { confirmation = it }
         }
 
         setContent {

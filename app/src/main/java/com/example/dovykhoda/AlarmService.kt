@@ -71,7 +71,14 @@ class AlarmService : Service() {
         when (intent?.action) {
             ACTION_TRIGGER -> startAlarm(intent)
             ACTION_SILENCE -> finishRing()
-            ACTION_STOP_ALL -> handleStopAlarm()
+            ACTION_STOP_ALL -> {
+                // Выключить расписание можно только после подтверждения на экране сигнала.
+                if (intent.getBooleanExtra(EXTRA_CONFIRMED_STOP, false)) {
+                    handleStopAlarm()
+                } else {
+                    AlarmLog.event("stop_alarm_ignored", "reason" to "no_confirmation")
+                }
+            }
             ACTION_REMIND_ONLY -> handleRemindersOnly()
             ACTION_DISABLE -> {
                 SettingsStore(this).clearActiveCycle()
@@ -705,6 +712,7 @@ class AlarmService : Service() {
         const val ACTION_REMIND_ONLY = "com.example.dovykhoda.action.REMIND_ONLY"
         private const val ACTION_REFRESH = "com.example.dovykhoda.action.REFRESH_REMINDERS"
         const val ACTION_RING_FINISHED = "com.example.dovykhoda.action.RING_FINISHED"
+        const val EXTRA_CONFIRMED_STOP = "extra_confirmed_stop"
         private const val EXTRA_TEST = "extra_test"
         private const val SPEECH_DELAY_MS = 1_200L
 
@@ -749,7 +757,8 @@ class AlarmService : Service() {
         }
 
         fun stopAlarm(context: Context) {
-            context.startService(Intent(context, AlarmService::class.java).setAction(ACTION_STOP_ALL))
+            context.startService(Intent(context, AlarmService::class.java).setAction(ACTION_STOP_ALL)
+                .putExtra(EXTRA_CONFIRMED_STOP, true))
         }
 
         fun disable(context: Context) {
