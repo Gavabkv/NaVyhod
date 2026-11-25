@@ -43,6 +43,7 @@ class AlarmRingingActivity : ComponentActivity() {
             "remaining" to intent?.getIntExtra(EXTRA_REMAINING, -1),
             "late" to intent?.getIntExtra(EXTRA_LATE_MINUTES, 0),
             "confirmStop" to intent?.getBooleanExtra(EXTRA_CONFIRM_STOP, false),
+            "confirmRemind" to intent?.getBooleanExtra(EXTRA_CONFIRM_REMIND, false),
             "ringing" to AlarmService.isRinging,
             "recreated" to (savedInstanceState != null),
             "locked" to {
@@ -159,11 +160,14 @@ class AlarmRingingActivity : ComponentActivity() {
         if (intent == null) return
         val nextLateMinutes = intent.getIntExtra(EXTRA_LATE_MINUTES, 0)
         val requestedStop = intent.getBooleanExtra(EXTRA_CONFIRM_STOP, false)
+        val requestedRemind = intent.getBooleanExtra(EXTRA_CONFIRM_REMIND, false)
         val previous = confirmation
         remainingMinutes = intent.getIntExtra(EXTRA_REMAINING, -1)
         lateMinutes = nextLateMinutes
         confirmation = when {
             requestedStop -> AlarmConfirmation.Stop
+            // Кнопка «Напомнить» в шторке тоже проходит через вопрос «Вы уверены?».
+            requestedRemind && nextLateMinutes <= 0 -> AlarmConfirmation.RemindDeparture
             // Новый сигнал в окне опоздания не должен сбрасывать вопрос об отключении.
             previous == AlarmConfirmation.Stop && nextLateMinutes > 0 -> previous
             // Вопрос «напомнить о выходе» остаётся, пока не началось опоздание.
@@ -176,6 +180,7 @@ class AlarmRingingActivity : ComponentActivity() {
         const val EXTRA_REMAINING = "extra_remaining"
         const val EXTRA_LATE_MINUTES = "extra_late_minutes"
         const val EXTRA_CONFIRM_STOP = "extra_confirm_stop"
+        const val EXTRA_CONFIRM_REMIND = "extra_confirm_remind"
         private const val STATE_CONFIRMATION = "state_confirmation"
     }
 }

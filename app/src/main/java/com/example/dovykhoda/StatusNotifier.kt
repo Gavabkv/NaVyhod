@@ -28,6 +28,7 @@ object StatusNotifier {
     private const val RC_STOP_CONFIRM = 12
     private const val RC_SILENCE = 13
     private const val RC_DISMISS = 14
+    private const val RC_CONFIRM_REMIND = 15
     private const val RC_LATE_SCREEN = 16
 
     fun ensureChannels(context: Context) {
@@ -97,10 +98,7 @@ object StatusNotifier {
             .setContentIntent(fullScreenIntent(context, false, remainingMinutes))
             .setFullScreenIntent(fullScreenIntent(context, false, remainingMinutes), true)
             .addAction(0, "Отложить", silenceIntent(context))
-            .addAction(0, "Напомнить", PendingIntent.getService(
-                context, 15, Intent(context, AlarmService::class.java).setAction(AlarmService.ACTION_REMIND_ONLY),
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-            ))
+            .addAction(0, "Напомнить", remindConfirmIntent(context, remainingMinutes))
             .addAction(0, "Выключить", stopConfirmIntent(context, remainingMinutes))
             .build()
     }
@@ -218,14 +216,17 @@ object StatusNotifier {
         confirmStop: Boolean,
         remainingMinutes: Int,
         lateMinutes: Int = 0,
+        confirmRemind: Boolean = false,
     ): PendingIntent {
         val intent = Intent(context, AlarmRingingActivity::class.java)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
             .putExtra(AlarmRingingActivity.EXTRA_CONFIRM_STOP, confirmStop)
+            .putExtra(AlarmRingingActivity.EXTRA_CONFIRM_REMIND, confirmRemind)
             .putExtra(AlarmRingingActivity.EXTRA_REMAINING, remainingMinutes)
             .putExtra(AlarmRingingActivity.EXTRA_LATE_MINUTES, lateMinutes)
         val requestCode = when {
             confirmStop -> RC_STOP_CONFIRM
+            confirmRemind -> RC_CONFIRM_REMIND
             lateMinutes > 0 -> RC_LATE_SCREEN
             else -> RC_FULL_SCREEN
         }
@@ -235,6 +236,13 @@ object StatusNotifier {
 
     private fun stopConfirmIntent(context: Context, remainingMinutes: Int) =
         fullScreenIntent(context, true, remainingMinutes)
+
+    /**
+     * «Напомнить» в шторке не выключает музыку сразу: открывается тот же вопрос
+     * «Вы уверены?», что и на экране будильника.
+     */
+    private fun remindConfirmIntent(context: Context, remainingMinutes: Int) =
+        fullScreenIntent(context, false, remainingMinutes, confirmRemind = true)
 
     private fun silenceIntent(context: Context): PendingIntent = PendingIntent.getService(
         context, RC_SILENCE, Intent(context, AlarmService::class.java).setAction(AlarmService.ACTION_SILENCE),

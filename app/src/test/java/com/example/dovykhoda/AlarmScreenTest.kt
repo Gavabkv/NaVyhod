@@ -200,6 +200,49 @@ class AlarmScreenTest {
         }
     }
 
+    @Test
+    fun `notification remind action opens the confirmation dialog instead of silencing at once`() {
+        activeCycle(15)
+        val intent = Intent(context, AlarmRingingActivity::class.java)
+            .putExtra(AlarmRingingActivity.EXTRA_CONFIRM_REMIND, true)
+            .putExtra(AlarmRingingActivity.EXTRA_REMAINING, 15)
+        val activity = Robolectric.buildActivity(AlarmRingingActivity::class.java, intent).setup()
+        try {
+            compose.onNodeWithText("Вы уверены?").assertIsDisplayed()
+            compose.runOnIdle {
+                assertNull(shadowOf(RuntimeEnvironment.getApplication()).nextStartedService)
+            }
+            compose.onNodeWithText("Отмена").performClick()
+            compose.onNodeWithText("Вы уверены?").assertDoesNotExist()
+            compose.runOnIdle {
+                assertNull(shadowOf(RuntimeEnvironment.getApplication()).nextStartedService)
+                assertFalse(activity.get().isFinishing)
+            }
+        } finally {
+            activity.pause().stop().destroy()
+        }
+    }
+
+    @Test
+    fun `notification remind action confirms into reminders only mode`() {
+        activeCycle(15)
+        val intent = Intent(context, AlarmRingingActivity::class.java)
+            .putExtra(AlarmRingingActivity.EXTRA_CONFIRM_REMIND, true)
+            .putExtra(AlarmRingingActivity.EXTRA_REMAINING, 15)
+        val activity = Robolectric.buildActivity(AlarmRingingActivity::class.java, intent).setup()
+        try {
+            compose.onNodeWithText("Да, напомнить").performClick()
+            compose.runOnIdle {
+                val remind = shadowOf(RuntimeEnvironment.getApplication()).nextStartedService
+                assertNotNull(remind)
+                assertEquals(AlarmService.ACTION_REMIND_ONLY, remind.action)
+                assertTrue(activity.get().isFinishing)
+            }
+        } finally {
+            activity.pause().stop().destroy()
+        }
+    }
+
     private fun withLateWindow(
         test: (AlarmService, org.robolectric.android.controller.ActivityController<AlarmRingingActivity>) -> Unit,
     ) {

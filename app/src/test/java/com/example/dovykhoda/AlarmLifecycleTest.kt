@@ -554,8 +554,10 @@ class AlarmLifecycleTest {
             notification.actions.map { it.title.toString() })
         assertEquals(AlarmService.ACTION_SILENCE,
             shadowOf(notification.actions[0].actionIntent).savedIntent.action)
-        assertEquals(AlarmService.ACTION_REMIND_ONLY,
-            shadowOf(notification.actions[1].actionIntent).savedIntent.action)
+        val remind = shadowOf(notification.actions[1].actionIntent).savedIntent
+        assertEquals(AlarmRingingActivity::class.java.name, remind.component!!.className)
+        assertTrue(remind.getBooleanExtra(AlarmRingingActivity.EXTRA_CONFIRM_REMIND, false))
+        assertEquals(15, remind.getIntExtra(AlarmRingingActivity.EXTRA_REMAINING, -1))
         assertTrue(shadowOf(notification.actions[2].actionIntent).savedIntent
             .getBooleanExtra(AlarmRingingActivity.EXTRA_CONFIRM_STOP, false))
         assertEquals(listOf("Отложить", "Выключить"),
