@@ -88,17 +88,6 @@ fun SettingsTab(
         }
         Spacer(Modifier.height(12.dp))
 
-        ScreenCard("Оформление") {
-            ToggleRow(
-                title = "Тёмная тема",
-                subtitle = "Светлый или тёмный вид приложения",
-                checked = darkTheme,
-                tag = "theme_dark",
-                onCheckedChange = onDarkThemeChange,
-            )
-        }
-        Spacer(Modifier.height(12.dp))
-
         ScreenCard("Сигналы") {
             Text(
                 "Как часто играет музыка от пробуждения до выхода.",
@@ -251,6 +240,17 @@ fun SettingsTab(
                     )
                 }
             }
+        }
+        Spacer(Modifier.height(12.dp))
+
+        ScreenCard("Оформление") {
+            ToggleRow(
+                title = "Тёмная тема",
+                subtitle = "Светлый или тёмный вид приложения",
+                checked = darkTheme,
+                tag = "theme_dark",
+                onCheckedChange = onDarkThemeChange,
+            )
         }
         Spacer(Modifier.height(12.dp))
 
