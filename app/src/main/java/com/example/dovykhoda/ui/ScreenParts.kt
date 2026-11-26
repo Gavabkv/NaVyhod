@@ -34,10 +34,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import kotlinx.coroutines.launch
@@ -260,15 +258,10 @@ private fun TimeInputDialog(
     onConfirm: (Int, Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    fun startValue(minutes: Int) =
-        TextFieldValue(minutes.toString().padStart(2, '0'), selection = TextRange(0, 2))
+    fun clock(hourOrMinute: Int) = hourOrMinute.toString().padStart(2, '0')
 
-    var hourField by remember { mutableStateOf(startValue(initialHour)) }
-    var minuteField by remember { mutableStateOf(startValue(initialMinute)) }
-    // Выделяем цифры только после того, как поле получило фокус и IME
-    // синхронизировал значение: иначе курсор иногда встаёт в конец текста.
-    var selectHourOnFocus by remember { mutableStateOf(true) }
-    var selectMinuteOnFocus by remember { mutableStateOf(false) }
+    var hourField by remember { mutableStateOf(TextFieldValue(clock(initialHour))) }
+    var minuteField by remember { mutableStateOf(TextFieldValue(clock(initialMinute))) }
     val hourFocus = remember { FocusRequester() }
     val minuteFocus = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
@@ -281,9 +274,6 @@ private fun TimeInputDialog(
         runCatching { hourFocus.requestFocus() }
         keyboard?.show()
     }
-
-    fun selectAll(value: TextFieldValue) =
-        value.copy(selection = TextRange(0, value.text.length))
 
     val hour = hourField.text.toIntOrNull()
     val minute = minuteField.text.toIntOrNull()
@@ -300,17 +290,17 @@ private fun TimeInputDialog(
                     OutlinedTextField(
                         value = hourField,
                         onValueChange = { value ->
-                            val text = value.text.filter { it.isDigit() }.take(2)
-                            hourField = if (text == value.text) value
-                            else TextFieldValue(text, selection = TextRange(text.length))
-                            // После двух цифр часов переходим к минутам. Фокус и выделение
-                            // ставим следующим кадром: иначе поле часов теряет фокус раньше,
-                            // чем успевает применить новое значение, и откатывается назад.
-                            if (text.length == 2) {
-                                selectMinuteOnFocus = true
-                                scope.launch {
-                                    withFrameNanos { }
-                                    minuteFocus.requestFocus()
+                            if (value.text != hourField.text) {
+                                val digits = applyTypedDigits(hourField.text, value.text)
+                                hourField = TextFieldValue(digits)
+                                // После двух цифр часов переходим к минутам следующим
+                                // кадром: иначе поле теряет фокус раньше, чем успевает
+                                // применить новое значение, и откатывается назад.
+                                if (digits.length == 2) {
+                                    scope.launch {
+                                        withFrameNanos { }
+                                        runCatching { minuteFocus.requestFocus() }
+                                    }
                                 }
                             }
                         },
@@ -320,24 +310,16 @@ private fun TimeInputDialog(
                         modifier = Modifier
                             .weight(1f)
                             .testTag("time_hour_input")
-                            .focusRequester(hourFocus)
-                            .onFocusChanged { state ->
-                                if (state.isFocused && selectHourOnFocus) {
-                                    selectHourOnFocus = false
-                                    scope.launch {
-                                        withFrameNanos { }
-                                        hourField = selectAll(hourField)
-                                    }
-                                }
-                            },
+                            .focusRequester(hourFocus),
                     )
                     Text(":", style = MaterialTheme.typography.headlineSmall)
                     OutlinedTextField(
                         value = minuteField,
                         onValueChange = { value ->
-                            val text = value.text.filter { it.isDigit() }.take(2)
-                            minuteField = if (text == value.text) value
-                            else TextFieldValue(text, selection = TextRange(text.length))
+                            if (value.text != minuteField.text) {
+                                val digits = applyTypedDigits(minuteField.text, value.text)
+                                minuteField = TextFieldValue(digits)
+                            }
                         },
                         label = { Text("Минуты") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -345,16 +327,7 @@ private fun TimeInputDialog(
                         modifier = Modifier
                             .weight(1f)
                             .testTag("time_minute_input")
-                            .focusRequester(minuteFocus)
-                            .onFocusChanged { state ->
-                                if (state.isFocused && selectMinuteOnFocus) {
-                                    selectMinuteOnFocus = false
-                                    scope.launch {
-                                        withFrameNanos { }
-                                        minuteField = selectAll(minuteField)
-                                    }
-                                }
-                            },
+                            .focusRequester(minuteFocus),
                     )
                 }
                 if (!valid && (hourField.text.isNotEmpty() || minuteField.text.isNotEmpty())) {
@@ -377,4 +350,25 @@ private fun TimeInputDialog(
             TextButton(onClick = onDismiss) { Text("Отмена") }
         },
     )
+}
+
+/**
+ * Цифры, которые нужно записать в поле после ввода [updated] поверх [previous].
+ *
+ * Системная клавиатура при передаче фокуса сбрасывает выделение, поэтому
+ * полагаться на него нельзя. Вместо этого: если в поле уже две цифры, первая
+ * введённая цифра заменяет всё содержимое (дальше набор продолжается).
+ * Так пользователю не нужно ничего удалять перед вводом нового времени.
+ */
+internal fun applyTypedDigits(previous: String, updated: String): String {
+    val typed = if (previous.length >= 2) {
+        when {
+            updated.startsWith(previous) -> updated.removePrefix(previous)
+            updated.endsWith(previous) -> updated.removeSuffix(previous)
+            else -> updated
+        }
+    } else {
+        updated
+    }
+    return typed.filter { it.isDigit() }.take(2)
 }

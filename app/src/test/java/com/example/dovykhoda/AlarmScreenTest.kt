@@ -8,7 +8,6 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.text.TextLayoutResult
-import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsFocused
@@ -241,7 +240,7 @@ class AlarmScreenTest {
     }
 
     @Test
-    fun `two hour digits move focus to minutes with digits selected`() {
+    fun `two hour digits move focus to minutes and typing replaces the old minutes`() {
         showScreen()
         openEditor()
         openTimeDialog()
@@ -251,10 +250,11 @@ class AlarmScreenTest {
             .config[SemanticsProperties.EditableText].text
         assertEquals("09", hourText)
         compose.onNodeWithTag("time_minute_input").assertIsFocused()
-        val selection = compose.onNodeWithTag("time_minute_input").fetchSemanticsNode()
-            .config[SemanticsProperties.TextSelectionRange]
-        assertEquals(TextRange(0, 2), selection)
+        // Старые минуты остаются на месте, но первая набранная цифра заменяет их.
         compose.onNodeWithTag("time_minute_input").performTextInput("30")
+        val minuteText = compose.onNodeWithTag("time_minute_input").fetchSemanticsNode()
+            .config[SemanticsProperties.EditableText].text
+        assertEquals("30", minuteText)
         compose.onNodeWithTag("time_confirm").performClick()
         compose.runOnIdle { assertEquals("09:30", store.alarm(1L)?.wakeLabel) }
     }
