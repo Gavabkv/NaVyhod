@@ -1,5 +1,6 @@
 package com.example.dovykhoda.ui
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
@@ -9,23 +10,26 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -89,10 +93,14 @@ fun TimeTile(
         }
     }
     if (showPicker) {
-        NativeTimePicker(
+        TimeInputDialog(
+            title = label,
             initialHour = value.substringBefore(':').toIntOrNull() ?: 0,
             initialMinute = value.substringAfter(':').toIntOrNull() ?: 0,
-            onPick = onPick,
+            onConfirm = { hour, minute ->
+                showPicker = false
+                onPick(hour, minute)
+            },
             onDismiss = { showPicker = false },
         )
     }
@@ -229,23 +237,63 @@ fun formatDuration(minutes: Int): String {
 }
 
 @Composable
-private fun NativeTimePicker(
+private fun TimeInputDialog(
+    title: String,
     initialHour: Int,
     initialMinute: Int,
-    onPick: (Int, Int) -> Unit,
+    onConfirm: (Int, Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    val context = LocalContext.current
-    DisposableEffect(Unit) {
-        val dialog = android.app.TimePickerDialog(
-            context,
-            { _, hour, minute -> onPick(hour, minute); onDismiss() },
-            initialHour,
-            initialMinute,
-            true,
-        )
-        dialog.setOnCancelListener { onDismiss() }
-        dialog.show()
-        onDispose { dialog.dismiss() }
-    }
+    var hourText by remember { mutableStateOf(initialHour.toString().padStart(2, '0')) }
+    var minuteText by remember { mutableStateOf(initialMinute.toString().padStart(2, '0')) }
+    val hour = hourText.toIntOrNull()
+    val minute = minuteText.toIntOrNull()
+    val valid = hour != null && hour in 0..23 && minute != null && minute in 0..59
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Время: $title") },
+        text = {
+            Column {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    OutlinedTextField(
+                        value = hourText,
+                        onValueChange = { text -> hourText = text.filter { it.isDigit() }.take(2) },
+                        label = { Text("Часы") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.weight(1f).testTag("time_hour_input"),
+                    )
+                    Text(":", style = MaterialTheme.typography.headlineSmall)
+                    OutlinedTextField(
+                        value = minuteText,
+                        onValueChange = { text -> minuteText = text.filter { it.isDigit() }.take(2) },
+                        label = { Text("Минуты") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        modifier = Modifier.weight(1f).testTag("time_minute_input"),
+                    )
+                }
+                if (!valid && (hourText.isNotEmpty() || minuteText.isNotEmpty())) {
+                    Text(
+                        "Введите часы 0–23 и минуты 0–59",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(hour!!, minute!!) },
+                enabled = valid,
+                modifier = Modifier.testTag("time_confirm"),
+            ) { Text("Готово") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Отмена") }
+        },
+    )
 }

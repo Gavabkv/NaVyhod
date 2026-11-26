@@ -88,7 +88,7 @@ fun SettingsTab(
             )
             Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(2, 3, 5, 10, 15, 30).forEach { minutes ->
+                listOf(5, 10).forEach { minutes ->
                     SelectChip(
                         text = "$minutes",
                         selected = settings.intervalMinutes == minutes,
@@ -269,13 +269,16 @@ private fun NextSignalInfo(
         return
     }
     val (alarm, trigger) = next
+    val minutesUntil = (trigger.atMillis - nowMillis + 59_999L) / 60_000L
+    val whenText = if (minutesUntil <= 0L) "меньше чем через минуту"
+    else "через ${formatDuration(minutesUntil.toInt())}"
     Text(
-        "${alarm.wakeLabel}–${alarm.leaveLabel} · ${formatWhen(trigger.atMillis, nowMillis)}",
+        "Ближайший будильник включится $whenText",
         style = MaterialTheme.typography.bodyLarge,
     )
     Text(
-        alarm.daysLabel,
-        style = MaterialTheme.typography.bodySmall,
+        "${formatWhen(trigger.atMillis, nowMillis)} · ${alarm.daysLabel}",
+        style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
 }

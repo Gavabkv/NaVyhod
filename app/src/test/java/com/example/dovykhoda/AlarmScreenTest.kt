@@ -20,6 +20,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.unit.sp
 import com.example.dovykhoda.ui.AppScreen
 import com.example.dovykhoda.ui.RingingScreen
@@ -92,6 +93,14 @@ class AlarmScreenTest {
         compose.onNodeWithTag("perm_exact").performScrollTo().assertIsDisplayed()
         compose.onNodeWithTag("tab_alarms").performClick()
         compose.onNodeWithTag("alarm_card_1").assertIsDisplayed()
+    }
+
+    @Test
+    fun `settings tab announces when the nearest alarm will fire`() {
+        showScreen()
+        compose.onNodeWithTag("tab_settings").performClick()
+        compose.onNodeWithText("Ближайший будильник включится", substring = true)
+            .performScrollTo().assertIsDisplayed()
     }
 
     @Test
@@ -188,6 +197,29 @@ class AlarmScreenTest {
             assertEquals(true, store.alarm(1L)?.departureTimeOnly)
             assertEquals("06:30", store.alarm(1L)?.wakeLabel)
         }
+    }
+
+    @Test
+    fun `time is typed with a numeric keyboard instead of a clock dial`() {
+        showScreen()
+        openEditor()
+        compose.onNodeWithTag("editor_wake_time").performClick()
+        compose.onNodeWithTag("time_hour_input").performTextReplacement("9")
+        compose.onNodeWithTag("time_minute_input").performTextReplacement("45")
+        compose.onNodeWithTag("time_confirm").performClick()
+        compose.runOnIdle {
+            assertEquals("09:45", store.alarm(1L)?.wakeLabel)
+            assertEquals("11:15", store.alarm(1L)?.leaveLabel)
+        }
+    }
+
+    @Test
+    fun `invalid typed time cannot be confirmed`() {
+        showScreen()
+        openEditor()
+        compose.onNodeWithTag("editor_wake_time").performClick()
+        compose.onNodeWithTag("time_hour_input").performTextReplacement("25")
+        compose.onNodeWithTag("time_confirm").assertIsNotEnabled()
     }
 
     @Test
