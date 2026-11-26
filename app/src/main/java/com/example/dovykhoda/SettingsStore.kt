@@ -432,6 +432,14 @@ class SettingsStore(context: Context) {
         prefs.edit().putLong(KEY_PRE_DISMISSED_CYCLE, cycleWakeMillis).apply()
     }
 
+    /** Разрешение уже предлагали при запуске: повторно не навязываем. */
+    fun permissionAsked(kind: String): Boolean =
+        prefs.getBoolean(KEY_PERMISSION_ASKED + kind, false)
+
+    fun markPermissionAsked(kind: String) {
+        prefs.edit().putBoolean(KEY_PERMISSION_ASKED + kind, true).apply()
+    }
+
     private companion object {
         const val PREFS_NAME = "alarm_settings"
         const val KEY_STORAGE_MIGRATED = "storage_migrated"
@@ -463,5 +471,6 @@ class SettingsStore(context: Context) {
         const val KEY_STOPPED_ALARM_ID = "stopped_cycle_alarm_id"
         const val KEY_DEPARTURE_SPOKEN = "departure_spoken_"
         const val KEY_SIGNAL_DELIVERED = "signal_delivered_wake"
+        const val KEY_PERMISSION_ASKED = "permission_asked_"
     }
 }

@@ -20,6 +20,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
@@ -158,12 +159,23 @@ fun AppScreen(
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
+            val tabColors = NavigationBarItemDefaults.colors(
+                selectedIconColor = MaterialTheme.colorScheme.onPrimary,
+                selectedTextColor = MaterialTheme.colorScheme.onPrimary,
+                unselectedIconColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.65f),
+                unselectedTextColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.65f),
+                indicatorColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.22f),
+            )
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary,
+            ) {
                 NavigationBarItem(
                     selected = tab == 0,
                     onClick = { tab = 0; editingId = null },
                     icon = { Icon(Icons.Filled.Notifications, contentDescription = null) },
                     label = { Text("Будильники") },
+                    colors = tabColors,
                     modifier = Modifier.testTag("tab_alarms"),
                 )
                 NavigationBarItem(
@@ -171,6 +183,7 @@ fun AppScreen(
                     onClick = { tab = 1; editingId = null },
                     icon = { Icon(Icons.Filled.Settings, contentDescription = null) },
                     label = { Text("Настройки") },
+                    colors = tabColors,
                     modifier = Modifier.testTag("tab_settings"),
                 )
             }

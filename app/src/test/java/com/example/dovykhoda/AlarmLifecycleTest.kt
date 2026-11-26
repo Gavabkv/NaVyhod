@@ -1011,6 +1011,35 @@ class AlarmLifecycleTest {
     }
 
     @Test
+    fun `startup asks for do not disturb access once`() {
+        shadowOf(context.getSystemService(android.app.NotificationManager::class.java))
+            .setNotificationPolicyAccessGranted(false)
+        val store = SettingsStore(context)
+        // Остальные разрешения будто уже предлагались: проверяем именно DND.
+        listOf(
+            "notifications", "exact_alarms", "full_screen_intent",
+            "turn_screen_on", "ring_channel", "battery_exemption",
+        ).forEach { store.markPermissionAsked(it) }
+        val controller = Robolectric.buildActivity(MainActivity::class.java).create().start()
+        val activity = controller.resume().get()
+        try {
+            val requested = shadowOf(activity).nextStartedActivity
+            assertTrue(
+                requested != null && (
+                    requested.action == "android.settings.NOTIFICATION_POLICY_ACCESS_DETAIL_SETTINGS" ||
+                        requested.action == Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS
+                    )
+            )
+            assertTrue(store.permissionAsked("dnd_access"))
+            // Возврат из настроек не должен открывать тот же экран снова.
+            controller.pause().resume()
+            assertNull(shadowOf(activity).nextStartedActivity)
+        } finally {
+            controller.destroy()
+        }
+    }
+
+    @Test
     fun `existing settings migrate to device protected storage`() {
         context.getSharedPreferences("alarm_settings", Context.MODE_PRIVATE).edit()
             .putInt("wake_hour", 9).putBoolean("enabled", true).commit()

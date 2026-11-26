@@ -29,6 +29,17 @@ class MainActivity : ComponentActivity() {
         ActivityResultContracts.RequestPermission()
     ) { /* состояние обновится при возврате на экран */ }
 
+    /** Все разрешения, без которых будильник может не разбудить. */
+    private enum class PermissionKind(val key: String) {
+        Notifications("notifications"),
+        ExactAlarms("exact_alarms"),
+        FullScreenIntent("full_screen_intent"),
+        TurnScreenOn("turn_screen_on"),
+        RingChannel("ring_channel"),
+        DndAccess("dnd_access"),
+        BatteryExemption("battery_exemption"),
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -46,6 +57,47 @@ class MainActivity : ComponentActivity() {
                     onExportLogs = ::shareLogs,
                 )
             }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        // Первый запуск: по очереди открываем недостающие разрешения. Вернувшись
+        // из системного экрана, здесь же спрашиваем следующее. Каждое
+        // предлагается один раз, дальше напоминают строки в «Настройках».
+        requestMissingPermissions()
+    }
+
+    private fun requestMissingPermissions() {
+        // Поверх экрана сигнала системные окна открывать нельзя.
+        if (AlarmService.isRinging) return
+        val store = SettingsStore(this)
+        val kind = PermissionKind.entries.firstOrNull { candidate ->
+            !store.permissionAsked(candidate.key) && isPermissionMissing(candidate)
+        } ?: return
+        store.markPermissionAsked(kind.key)
+        AlarmLog.event("permission_request", "kind" to kind.key)
+        when (kind) {
+            PermissionKind.Notifications -> askNotifications()
+            PermissionKind.ExactAlarms -> openExactAlarmSettings()
+            PermissionKind.FullScreenIntent -> openFullScreenIntentSettings()
+            PermissionKind.TurnScreenOn -> openTurnScreenOnSettings()
+            PermissionKind.RingChannel -> openRingChannelSettings()
+            PermissionKind.DndAccess -> openDndAccessSettings()
+            PermissionKind.BatteryExemption -> askBatteryExemption()
+        }
+    }
+
+    private fun isPermissionMissing(kind: PermissionKind): Boolean {
+        val notifications = getSystemService(NotificationManager::class.java)
+        return when (kind) {
+            PermissionKind.Notifications -> notifications?.areNotificationsEnabled() != true
+            PermissionKind.ExactAlarms -> !AlarmScheduler.canScheduleExact(this)
+            PermissionKind.FullScreenIntent -> !canUseFullScreenIntent(this)
+            PermissionKind.TurnScreenOn -> !canTurnScreenOn(this)
+            PermissionKind.RingChannel -> !StatusNotifier.isRingChannelAvailable(this)
+            PermissionKind.DndAccess -> notifications?.isNotificationPolicyAccessGranted != true
+            PermissionKind.BatteryExemption -> !isIgnoringBatteryOptimizations(this)
         }
     }
 
@@ -140,6 +192,10 @@ class MainActivity : ComponentActivity() {
 
     /** Без доступа к политике уведомлений приложение не видит «Не беспокоить». */
     private fun openDndAccessSettings() {
+        val detail = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            Intent(ACTION_DND_ACCESS_DETAIL, Uri.parse("package:$packageName"))
+        } else null
+        if (detail != null && runCatching { startActivity(detail) }.isSuccess) return
         runCatching { startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)) }
             .onFailure {
                 runCatching {
@@ -175,6 +231,10 @@ class MainActivity : ComponentActivity() {
     }
 
     companion object {
+        /** Экран доступа к политике уведомлений для одного приложения. */
+        private const val ACTION_DND_ACCESS_DETAIL =
+            "android.settings.NOTIFICATION_POLICY_ACCESS_DETAIL_SETTINGS"
+
         fun isIgnoringBatteryOptimizations(context: Context): Boolean {
             val manager = context.getSystemService(PowerManager::class.java) ?: return false
             return manager.isIgnoringBatteryOptimizations(context.packageName)
