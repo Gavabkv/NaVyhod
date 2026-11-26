@@ -247,3 +247,7 @@ idiomas está en `res/xml/locales_config.xml`.
 * La hora actual antes de la frase se configura por separado para señales,
   recordatorios de salida y recordatorios de retraso. Los propios recordatorios
   de voz no se pueden desactivar.
+
+## Licencia
+
+Distribuido bajo la licencia MIT — ver [LICENSE](LICENSE).

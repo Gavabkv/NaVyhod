@@ -248,3 +248,7 @@ langues se trouve dans `res/xml/locales_config.xml`.
 * L'heure actuelle avant la phrase se configure séparément pour les signaux,
   les rappels de sortie et de retard. Les rappels vocaux eux-mêmes ne peuvent
   pas être désactivés.
+
+## Licence
+
+Distribué sous licence MIT — voir [LICENSE](LICENSE).

@@ -234,3 +234,7 @@ in `res/xml/locales_config.xml`.
 * The current time before a phrase is configured separately for signals,
   departure reminders and late reminders. The voice reminders themselves
   cannot be turned off.
+
+## License
+
+Licensed under the MIT License — see [LICENSE](LICENSE).

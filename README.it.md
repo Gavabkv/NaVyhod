@@ -245,3 +245,7 @@ Set di risorse: `values` (inglese), `values-ru`, `values-es`, `values-de`,
 * L'ora attuale prima della frase si configura separatamente per segnali,
   promemoria di uscita e di ritardo. I promemoria vocali stessi non possono
   essere disattivati.
+
+## Licenza
+
+Distribuito con licenza MIT — vedi [LICENSE](LICENSE).

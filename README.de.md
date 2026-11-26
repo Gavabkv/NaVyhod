@@ -248,3 +248,7 @@ Ressourcensätze: `values` (Englisch), `values-ru`, `values-es`, `values-de`,
 * Die aktuelle Uhrzeit vor dem Satz wird getrennt für Signale, Geh- und
   Verspätungserinnerungen eingestellt. Die Spracherinnerungen selbst lassen
   sich nicht abschalten.
+
+## Lizenz
+
+Veröffentlicht unter der MIT-Lizenz — siehe [LICENSE](LICENSE).

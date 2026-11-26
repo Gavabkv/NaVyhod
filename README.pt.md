@@ -242,3 +242,7 @@ idiomas fica em `res/xml/locales_config.xml`.
 * A hora atual antes da frase é configurada separadamente para sinais,
   lembretes de saída e de atraso. Os próprios lembretes de voz não podem ser
   desligados.
+
+## Licença
+
+Distribuído sob a licença MIT — veja [LICENSE](LICENSE).
