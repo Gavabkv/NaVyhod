@@ -448,6 +448,15 @@ class SettingsStore(context: Context) {
         prefs.edit().putBoolean(KEY_DARK_THEME, dark).apply()
     }
 
+    /** null — язык как в системе, иначе тег выбранного языка. */
+    fun languageTag(): String? = prefs.getString(KEY_LANGUAGE, null)?.takeIf { it.isNotEmpty() }
+
+    fun setLanguageTag(tag: String?) {
+        prefs.edit().apply {
+            if (tag == null) remove(KEY_LANGUAGE) else putString(KEY_LANGUAGE, tag)
+        }.apply()
+    }
+
     private companion object {
         const val PREFS_NAME = "alarm_settings"
         const val KEY_STORAGE_MIGRATED = "storage_migrated"
@@ -481,5 +490,6 @@ class SettingsStore(context: Context) {
         const val KEY_SIGNAL_DELIVERED = "signal_delivered_wake"
         const val KEY_PERMISSION_ASKED = "permission_asked_"
         const val KEY_DARK_THEME = "dark_theme"
+        const val KEY_LANGUAGE = "language_tag"
     }
 }

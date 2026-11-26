@@ -52,6 +52,12 @@ class AlarmService : Service() {
     private var sessionCycle: SettingsStore.ActiveCycle? = null
     private val announcingReminders = mutableSetOf<Int>()
 
+    private val speechLang: SpeechLang get() = LocaleHelper.speechLang(this)
+
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(LocaleHelper.wrap(newBase))
+    }
+
     override fun onCreate() {
         super.onCreate()
         AlarmLog.event("service_created")
@@ -229,7 +235,7 @@ class AlarmService : Service() {
                 delay(SPEECH_DELAY_MS)
                 speechJob = scope.launch {
                     val phrase = withCurrentTime(
-                        SpeechText.remaining(remaining),
+                        SpeechText.remaining(remaining, speechLang),
                         settings.announceTimeOnSignals,
                     )
                     val spoken = voice().speak(phrase)
@@ -360,7 +366,7 @@ class AlarmService : Service() {
         scope.launch {
             try {
                 val announce = store.load().announceTimeOnDeparture
-                speakReminder(SpeechText.departure(minutes), announceTime = announce)
+                speakReminder(SpeechText.departure(minutes, speechLang), announceTime = announce)
                 store.markDepartureReminderSpoken(leaveMillis, minutes)
                 if (minutes == 0) {
                     AlarmScheduler.cancelDepartureReminders(this@AlarmService)
@@ -488,7 +494,7 @@ class AlarmService : Service() {
                     "lateMs" to (System.currentTimeMillis() - due),
                     "announceTime" to announce,
                 )
-                speakReminder(SpeechText.late(minutes), repeats = 3, announceTime = announce)
+                speakReminder(SpeechText.late(minutes, speechLang), repeats = 3, announceTime = announce)
                 minutes = maxOf(minutes + 1,
                     SchedulePlanner.nextLateMinute(nowMillis(), leaveMillis))
             }
@@ -512,7 +518,7 @@ class AlarmService : Service() {
         sessionCycle?.let { SettingsStore(this).settingsFor(it.alarmId) } ?: settings
 
     private fun withCurrentTime(text: String, announceTime: Boolean): String =
-        if (announceTime) "${SpeechText.currentTime(LocalTime.now())}. $text" else text
+        if (announceTime) "${SpeechText.currentTime(LocalTime.now(), speechLang)}. $text" else text
 
     private suspend fun speakReminder(text: String, repeats: Int = 1, announceTime: Boolean = false) {
         AlarmLog.event(

@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">出発</string>
+
+    <string name="tab_alarms">アラーム</string>
+    <string name="tab_settings">設定</string>
+
+    <string name="alarms_title">アラーム</string>
+    <string name="alarms_add">追加</string>
+    <string name="alarms_empty">アラームはまだありません。「追加」をタップして最初のアラームを作成します。</string>
+    <string name="banner_reminders">出発リマインダー実行中</string>
+    <string name="banner_cycle">アラームサイクル進行中</string>
+    <string name="banner_leave">出発 %1$s</string>
+    <string name="banner_stop">停止</string>
+    <string name="stop_signals_title">信号を停止しますか？</string>
+    <string name="stop_signals_text">このサイクルの信号とリマインダーを停止します。アラームはオンのままで、次回は予定どおりに鳴ります。</string>
+    <string name="yes_stop">はい、停止</string>
+    <string name="cancel">キャンセル</string>
+    <string name="done">完了</string>
+    <string name="delete">削除</string>
+
+    <string name="alarm_leave_days">出発 %1$s · %2$s</string>
+    <string name="alarm_next_signal">次の信号: %1$s</string>
+
+    <string name="editor_title">アラーム</string>
+    <string name="back">戻る</string>
+    <string name="editor_enabled">アラームはオン</string>
+    <string name="editor_enabled_hint">オフの間は信号が鳴りません</string>
+    <string name="editor_time">時刻</string>
+    <string name="editor_wake">起床</string>
+    <string name="editor_leave">出発</string>
+    <string name="editor_departure_only">出発時刻のみ設定</string>
+    <string name="editor_departure_only_hint">起床時刻は準備時間から計算されます</string>
+    <string name="editor_preparation">準備時間</string>
+    <string name="editor_preparation_range">起床から出発まで</string>
+    <string name="editor_days">曜日</string>
+    <string name="editor_delete">アラームを削除</string>
+    <string name="delete_alarm_title">アラームを削除しますか？</string>
+    <string name="delete_alarm_text">アラーム %1$s — 出発 %2$s を完全に削除します。</string>
+    <string name="days_all">毎日</string>
+    <string name="days_weekdays">平日</string>
+    <string name="days_weekend">週末</string>
+    <string name="days_need_one">少なくとも1日は選択してください。</string>
+    <string name="days_none">曜日が選択されていません</string>
+
+    <string name="day_mon">月</string>
+    <string name="day_tue">火</string>
+    <string name="day_wed">水</string>
+    <string name="day_thu">木</string>
+    <string name="day_fri">金</string>
+    <string name="day_sat">土</string>
+    <string name="day_sun">日</string>
+
+    <string name="settings_title">設定</string>
+    <string name="settings_next_signal">次の信号</string>
+    <string name="settings_no_alarms">オンのアラームはありません。</string>
+    <string name="settings_next_soon">次のアラームは1分以内に鳴ります</string>
+    <string name="settings_next_in">次のアラームは%1$s後に鳴ります</string>
+    <string name="settings_when_days">%1$s · %2$s</string>
+
+    <string name="settings_signals">信号</string>
+    <string name="settings_signals_hint">起床から出発まで音楽が鳴る間隔。</string>
+    <string name="settings_interval">信号の間隔（分）</string>
+    <string name="settings_voice">音声</string>
+    <string name="settings_announce_signals">信号で時刻を読み上げ</string>
+    <string name="settings_announce_departure">出発リマインダーで時刻を読み上げ</string>
+    <string name="settings_announce_late">遅刻時に時刻を読み上げ</string>
+    <string name="settings_tts_lead">音声を開始</string>
+    <string name="settings_ring_duration">信号の長さ</string>
+    <string name="settings_ring_plays">音楽の再生時間</string>
+    <string name="seconds">%1$d 秒</string>
+    <string name="settings_notifications">通知</string>
+    <string name="settings_pre_notify">12時間前に通知</string>
+    <string name="settings_pre_notify_hint">通知に起床と出発の時刻を表示</string>
+    <string name="settings_appearance">外観</string>
+    <string name="settings_dark_theme">ダークテーマ</string>
+    <string name="settings_dark_theme_hint">ライトまたはダークの表示</string>
+    <string name="settings_language">言語</string>
+    <string name="language_system">システム</string>
+    <string name="settings_diagnostics">診断</string>
+    <string name="settings_diagnostics_text">アラームが期待どおりに動かなかった場合は、ログを送ってください。端末で何が起きたかがわかります。</string>
+    <string name="settings_send_logs">ログを送信</string>
+
+    <string name="permissions_title">権限と警告</string>
+    <string name="permission_missing_hint">許可されていません — アラームが鳴らない可能性があります</string>
+    <string name="perm_exact">正確なアラーム</string>
+    <string name="perm_notifications">通知</string>
+    <string name="perm_battery">バッテリー最適化の除外</string>
+    <string name="perm_fullscreen">全画面通知</string>
+    <string name="perm_turn_screen">画面をオンにする</string>
+    <string name="perm_ring_channel">音量の大きいチャンネル「アラーム信号」</string>
+    <string name="perm_volume">アラーム音量がオフ — 信号が聞こえません</string>
+    <string name="perm_dnd_access">「サイレントモード」へのアクセス</string>
+    <string name="perm_dnd_access_hint">アクセスがないと、モードがアラームを消音するか判定できません</string>
+    <string name="perm_dnd_blocks">「サイレントモード」でアラームが消音される可能性があります</string>
+    <string name="action_configure">設定</string>
+    <string name="action_allow">許可</string>
+    <string name="action_fix">修正</string>
+
+    <string name="time_invalid">時は0〜23、分は0〜59で入力してください</string>
+
+    <plurals name="until_departure">
+        <item quantity="other">出発まであと%1$d分</item>
+    </plurals>
+    <string name="time_to_leave">出発の時間です</string>
+    <string name="ring_wake_leave">起床 %1$s · 出発 %2$s</string>
+    <string name="ring_stop_title">信号を停止しますか？</string>
+    <string name="ring_silence">無音</string>
+    <string name="ring_silence_hint">音楽を停止、アラームはオンのまま</string>
+    <string name="ring_silence_hint_late">次の1分まで音声を停止</string>
+    <string name="ring_remind">音楽を止めて出発を通知</string>
+    <string name="ring_remind_hint">20、15、10、5分前と出発時に音声</string>
+    <string name="ring_remind_hint_late">「出発の時間です」 — その後は次の信号まで無音</string>
+    <string name="ring_stop">信号を停止</string>
+    <string name="ring_stop_hint">音楽と今日のすべてのリマインダーを停止</string>
+    <string name="confirm_title">よろしいですか？</string>
+    <string name="confirm_stop_text">このサイクルの音楽と音声リマインダーを停止します。アラームはオンのままで、次回は予定どおりに鳴ります。</string>
+    <string name="confirm_remind_text">音楽は停止しますが、出発の音声リマインダーは残ります。20、15、10、5分前と出発時に鳴ります。</string>
+    <string name="confirm_remind_text_late">音楽は停止しますが、「出発の時間です」は出発時に鳴ります。その後は遅刻リマインダーなしでアラームがオフになります。</string>
+    <string name="yes_remind">はい、通知する</string>
+
+    <string name="channel_status">アラーム設定済み</string>
+    <string name="channel_status_desc">スケジュールと遅刻リマインダー</string>
+    <string name="channel_ringing">アラーム信号</string>
+    <string name="channel_ringing_desc">出発までの音楽と音声案内</string>
+    <string name="notif_scheduled_title">アラーム設定済み</string>
+    <string name="notif_scheduled_text">起床 %1$s · 出発 %2$s</string>
+    <string name="notif_active_title">アラーム設定済み</string>
+    <string name="notif_leave_title">出発の時間です</string>
+    <string name="notif_active_text">%1$s\n起床 %2$s · 出発 %3$s</string>
+    <string name="notif_ringing_title">起きる時間です</string>
+    <string name="notif_snooze">スヌーズ</string>
+    <string name="notif_remind">通知</string>
+    <string name="notif_stop">停止</string>
+    <string name="notif_starting_title">出発</string>
+    <string name="notif_starting_text">信号を準備しています…</string>
+    <string name="notif_reminders_title">出発リマインダー</string>
+    <string name="notif_reminders_text">音楽なし · 出発 %1$s。20、15、10、5分前と出発時に音声。その後はリマインダーなし。</string>
+    <string name="notif_late_title">遅刻しています</string>
+
+    <string name="duration_h">%1$d時間</string>
+    <string name="duration_m">%1$d分</string>
+    <string name="duration_hm">%1$d時間%2$d分</string>
+
+    <string name="when_today">今日 %1$s</string>
+    <string name="when_tomorrow">明日 %1$s</string>
+    <string name="when_day">%1$s %2$s</string>
+
+    <string name="logs_empty">ログはまだありません</string>
+    <string name="logs_share_title">ログを送信</string>
+    <string name="logs_share_subject">アプリ「出発」のログ</string>
+    <string name="logs_share_text">アラームの診断ログです。アーカイブには端末情報とスケジュールが含まれる場合があります。</string>
+    <string name="logs_share_failed">ログ共有画面を開けませんでした</string>
+</resources>

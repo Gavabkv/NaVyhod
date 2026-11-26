@@ -19,6 +19,7 @@ class VoiceSpeaker(
     private val onSpeechEnd: () -> Unit = {},
 ) : TextToSpeech.OnInitListener {
     private val initResult = CompletableDeferred<Boolean>()
+    private val locale: Locale = LocaleHelper.appLocale(context.applicationContext)
     private var engine: TextToSpeech? = null
     private var speaking = false
 
@@ -37,12 +38,12 @@ class VoiceSpeaker(
                 .setUsage(AudioAttributes.USAGE_ALARM)
                 .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                 .build())
-            val language = tts.setLanguage(Locale("ru", "RU"))
+            val language = tts.setLanguage(locale)
             tts.setSpeechRate(0.95f)
             tts.setPitch(1f)
             language >= TextToSpeech.LANG_AVAILABLE
         }.getOrDefault(false)
-        if (!ready) Log.w(TAG, "Russian TTS voice is unavailable")
+        if (!ready) Log.w(TAG, "TTS voice is unavailable for $locale")
         initResult.complete(ready)
     }
 

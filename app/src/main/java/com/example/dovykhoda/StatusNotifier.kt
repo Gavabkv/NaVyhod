@@ -32,36 +32,40 @@ object StatusNotifier {
     private const val RC_LATE_SCREEN = 16
 
     fun ensureChannels(context: Context) {
+        val localized = LocaleHelper.wrap(context)
         val manager = context.getSystemService(NotificationManager::class.java)
-        if (manager.getNotificationChannel(CHANNEL_STATUS) == null) {
-            manager.createNotificationChannel(NotificationChannel(
-                CHANNEL_STATUS, "Будильник заведён", NotificationManager.IMPORTANCE_LOW,
-            ).apply {
-                description = "Расписание и напоминания об опоздании"
-                setSound(null, null)
-                enableVibration(false)
-                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
-            })
-        }
-        if (manager.getNotificationChannel(CHANNEL_RINGING) == null) {
-            manager.createNotificationChannel(NotificationChannel(
-                CHANNEL_RINGING, "Сигнал будильника", NotificationManager.IMPORTANCE_HIGH,
-            ).apply {
-                description = "Музыка и голосовые объявления до выхода"
-                setSound(null, null)
-                enableVibration(false)
-                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
-            })
-        }
+        // Каналы пересоздаются при каждом обращении, чтобы названия и описания
+        // в системных настройках обновлялись после смены языка.
+        manager.createNotificationChannel(NotificationChannel(
+            CHANNEL_STATUS, localized.getString(R.string.channel_status),
+            NotificationManager.IMPORTANCE_LOW,
+        ).apply {
+            description = localized.getString(R.string.channel_status_desc)
+            setSound(null, null)
+            enableVibration(false)
+            lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+        })
+        manager.createNotificationChannel(NotificationChannel(
+            CHANNEL_RINGING, localized.getString(R.string.channel_ringing),
+            NotificationManager.IMPORTANCE_HIGH,
+        ).apply {
+            description = localized.getString(R.string.channel_ringing_desc)
+            setSound(null, null)
+            enableVibration(false)
+            lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+        })
     }
 
     fun showScheduled(context: Context, settings: AlarmSettings, cycleWakeMillis: Long) {
         if (!settings.enabled || !settings.preNotifyEnabled || AlarmService.isRinging) return
         if (SettingsStore(context).preNotifyDismissedCycle() == cycleWakeMillis) return
         ensureChannels(context)
-        val text = "Пробуждение в ${settings.wakeLabel} · выход в ${settings.leaveLabel}"
+        val localized = LocaleHelper.wrap(context)
+        val text = localized.getString(
+            R.string.notif_scheduled_text, settings.wakeLabel, settings.leaveLabel,
+        )
         post(context, baseBuilder(context)
-            .setContentTitle("Будильник заведён")
+            .setContentTitle(localized.getString(R.string.notif_scheduled_title))
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setAutoCancel(false)
@@ -71,35 +75,43 @@ object StatusNotifier {
 
     fun buildActive(context: Context, settings: AlarmSettings, remainingMinutes: Int): Notification {
         ensureChannels(context)
-        val text = remainingText(remainingMinutes)
+        val localized = LocaleHelper.wrap(context)
+        val text = remainingText(localized, remainingMinutes)
         return baseBuilder(context)
-            .setContentTitle(if (remainingMinutes <= 0) "Пора выходить" else "Будильник заведён")
+            .setContentTitle(localized.getString(
+                if (remainingMinutes <= 0) R.string.notif_leave_title else R.string.notif_active_title,
+            ))
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(
-                "$text\nПробуждение в ${settings.wakeLabel} · выход в ${settings.leaveLabel}",
+                localized.getString(
+                    R.string.notif_active_text, text, settings.wakeLabel, settings.leaveLabel,
+                ),
             ))
             .setAutoCancel(false)
-            .addAction(0, "Остановить", stopConfirmIntent(context, remainingMinutes))
+            .addAction(0, localized.getString(R.string.notif_stop), stopConfirmIntent(context, remainingMinutes))
             .build()
     }
 
     fun buildRinging(context: Context, remainingMinutes: Int): Notification {
         ensureChannels(context)
+        val localized = LocaleHelper.wrap(context)
         return NotificationCompat.Builder(context, CHANNEL_RINGING)
             .setSmallIcon(R.drawable.ic_notification)
             .setColor(0xFFB45309.toInt())
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setPriority(NotificationCompat.PRIORITY_MAX)
-            .setContentTitle(if (remainingMinutes <= 0) "Пора выходить" else "Пора вставать")
-            .setContentText(remainingText(remainingMinutes))
+            .setContentTitle(localized.getString(
+                if (remainingMinutes <= 0) R.string.notif_leave_title else R.string.notif_ringing_title,
+            ))
+            .setContentText(remainingText(localized, remainingMinutes))
             .setCategory(NotificationCompat.CATEGORY_ALARM)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
             .setOngoing(true)
             .setContentIntent(fullScreenIntent(context, false, remainingMinutes))
             .setFullScreenIntent(fullScreenIntent(context, false, remainingMinutes), true)
-            .addAction(0, "Отложить", silenceIntent(context))
-            .addAction(0, "Напомнить", remindConfirmIntent(context, remainingMinutes))
-            .addAction(0, "Остановить", stopConfirmIntent(context, remainingMinutes))
+            .addAction(0, localized.getString(R.string.notif_snooze), silenceIntent(context))
+            .addAction(0, localized.getString(R.string.notif_remind), remindConfirmIntent(context, remainingMinutes))
+            .addAction(0, localized.getString(R.string.notif_stop), stopConfirmIntent(context, remainingMinutes))
             .build()
     }
 
@@ -110,9 +122,10 @@ object StatusNotifier {
      */
     fun buildStarting(context: Context): Notification {
         ensureChannels(context)
+        val localized = LocaleHelper.wrap(context)
         return baseBuilder(context)
-            .setContentTitle("На выход")
-            .setContentText("Подготовка сигнала…")
+            .setContentTitle(localized.getString(R.string.notif_starting_title))
+            .setContentText(localized.getString(R.string.notif_starting_text))
             .setAutoCancel(false)
             .setOngoing(true)
             .build()
@@ -122,25 +135,28 @@ object StatusNotifier {
         ensureChannels(context)
         val leave = java.time.Instant.ofEpochMilli(leaveMillis)
             .atZone(java.time.ZoneId.systemDefault()).toLocalTime()
-        val text = "Без музыки · выход в ${AlarmSettings.formatTime(leave.hour, leave.minute)}. " +
-            "Голос за 20, 15, 10 и 5 минут и в момент выхода. После этого — без напоминаний."
+        val localized = LocaleHelper.wrap(context)
+        val text = localized.getString(
+            R.string.notif_reminders_text, AlarmSettings.formatTime(leave.hour, leave.minute),
+        )
         return baseBuilder(context)
-            .setContentTitle("Напоминания о выходе")
+            .setContentTitle(localized.getString(R.string.notif_reminders_title))
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setAutoCancel(false)
             .setOngoing(true)
-            .addAction(0, "Остановить", stopConfirmIntent(context,
+            .addAction(0, localized.getString(R.string.notif_stop), stopConfirmIntent(context,
                 SchedulePlanner.remainingMinutes(System.currentTimeMillis(), leaveMillis)))
             .build()
     }
 
     fun buildLate(context: Context, lateMinutes: Int, showWindow: Boolean = false): Notification {
         ensureChannels(context)
-        val text = SpeechText.late(lateMinutes)
+        val localized = LocaleHelper.wrap(context)
+        val text = SpeechText.late(lateMinutes, LocaleHelper.speechLang(localized))
         val window = fullScreenIntent(context, false, 0, lateMinutes)
         return baseBuilder(context, if (showWindow) CHANNEL_RINGING else CHANNEL_STATUS)
-            .setContentTitle("Вы опоздали")
+            .setContentTitle(localized.getString(R.string.notif_late_title))
             .setContentText(text)
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setCategory(NotificationCompat.CATEGORY_ALARM)
@@ -152,8 +168,9 @@ object StatusNotifier {
             .setFullScreenIntent(if (showWindow) window else null, true)
             .setAutoCancel(false)
             .setOngoing(true)
-            .addAction(0, "Отложить", silenceIntent(context))
-            .addAction(0, "Остановить", fullScreenIntent(context, true, 0, lateMinutes))
+            .addAction(0, localized.getString(R.string.notif_snooze), silenceIntent(context))
+            .addAction(0, localized.getString(R.string.notif_stop),
+                fullScreenIntent(context, true, 0, lateMinutes))
             .build()
     }
 
@@ -295,6 +312,9 @@ object StatusNotifier {
         }
     }
 
-    fun remainingText(minutes: Int): String = if (minutes <= 0) "Пора выходить"
-        else "До выхода $minutes " + SpeechText.plural(minutes, "минута", "минуты", "минут")
+    fun remainingText(context: Context, minutes: Int): String = if (minutes <= 0) {
+        context.getString(R.string.time_to_leave)
+    } else {
+        context.resources.getQuantityString(R.plurals.until_departure, minutes, minutes)
+    }
 }

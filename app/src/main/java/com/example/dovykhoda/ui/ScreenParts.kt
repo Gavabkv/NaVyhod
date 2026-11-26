@@ -30,9 +30,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.dovykhoda.AlarmItem
+import com.example.dovykhoda.R
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.ZoneId
@@ -202,42 +205,60 @@ private fun labelColor(enabled: Boolean) =
 fun snapToStep(value: Int, range: IntRange, step: Int): Int =
     ((value - range.first + step / 2) / step * step + range.first).coerceIn(range.first, range.last)
 
-private val DAY_NAMES = mapOf(
-    DayOfWeek.MONDAY to "Пн",
-    DayOfWeek.TUESDAY to "Вт",
-    DayOfWeek.WEDNESDAY to "Ср",
-    DayOfWeek.THURSDAY to "Чт",
-    DayOfWeek.FRIDAY to "Пт",
-    DayOfWeek.SATURDAY to "Сб",
-    DayOfWeek.SUNDAY to "Вс",
-)
+private fun dayRes(day: DayOfWeek): Int = when (day) {
+    DayOfWeek.MONDAY -> R.string.day_mon
+    DayOfWeek.TUESDAY -> R.string.day_tue
+    DayOfWeek.WEDNESDAY -> R.string.day_wed
+    DayOfWeek.THURSDAY -> R.string.day_thu
+    DayOfWeek.FRIDAY -> R.string.day_fri
+    DayOfWeek.SATURDAY -> R.string.day_sat
+    DayOfWeek.SUNDAY -> R.string.day_sun
+}
 
-fun dayShort(day: DayOfWeek): String = DAY_NAMES.getValue(day)
+@Composable
+fun dayShort(day: DayOfWeek): String = stringResource(dayRes(day))
+
+@Composable
+fun daysLabel(days: Set<DayOfWeek>): String = when {
+    days.isEmpty() -> stringResource(R.string.days_none)
+    days.size == AlarmItem.ALL_DAYS.size -> stringResource(R.string.days_all)
+    days == AlarmItem.WEEKDAYS -> stringResource(R.string.days_weekdays)
+    days == AlarmItem.WEEKEND -> stringResource(R.string.days_weekend)
+    else -> {
+        val shorts = days.sortedBy { it.value }.map { dayShort(it) }
+        shorts.joinToString(", ")
+    }
+}
 
 fun formatClock(millis: Long): String {
     val local = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalTime()
     return "%02d:%02d".format(local.hour, local.minute)
 }
 
+@Composable
 fun formatWhen(atMillis: Long, nowMillis: Long): String {
     val zone = ZoneId.systemDefault()
     val date = Instant.ofEpochMilli(atMillis).atZone(zone).toLocalDate()
     val today = Instant.ofEpochMilli(nowMillis).atZone(zone).toLocalDate()
     val time = formatClock(atMillis)
     return when (date) {
-        today -> "сегодня, $time"
-        today.plusDays(1) -> "завтра, $time"
-        else -> "${DAY_NAMES.getValue(date.dayOfWeek)}, $time"
+        today -> stringResource(R.string.when_today, time)
+        today.plusDays(1) -> stringResource(R.string.when_tomorrow, time)
+        else -> {
+            val day = dayShort(date.dayOfWeek)
+            stringResource(R.string.when_day, day, time)
+        }
     }
 }
 
+@Composable
 fun formatDuration(minutes: Int): String {
     val hours = minutes / 60
     val rest = minutes % 60
     return when {
-        hours <= 0 -> "$rest мин"
-        rest == 0 -> "$hours ч"
-        else -> "$hours ч $rest мин"
+        hours <= 0 -> stringResource(R.string.duration_m, rest)
+        rest == 0 -> stringResource(R.string.duration_h, hours)
+        else -> stringResource(R.string.duration_hm, hours, rest)
     }
 }
 
@@ -352,7 +373,7 @@ private fun TimeInputDialog(
                 if (!valid && (hourDigits.isNotEmpty() || minuteDigits.isNotEmpty())) {
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "Введите часы 0–23 и минуты 0–59",
+                        stringResource(R.string.time_invalid),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error,
                     )
@@ -364,10 +385,10 @@ private fun TimeInputDialog(
                 onClick = { onConfirm(hour!!, minute!!) },
                 enabled = valid,
                 modifier = Modifier.testTag("time_confirm"),
-            ) { Text("Готово") }
+            ) { Text(stringResource(R.string.done)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Отмена") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
         },
     )
 }

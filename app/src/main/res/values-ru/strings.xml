@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">На выход</string>
+
+    <string name="tab_alarms">Будильники</string>
+    <string name="tab_settings">Настройки</string>
+
+    <string name="alarms_title">Будильники</string>
+    <string name="alarms_add">Добавить</string>
+    <string name="alarms_empty">Пока нет будильников. Нажмите «Добавить», чтобы создать первый.</string>
+    <string name="banner_reminders">Идут напоминания о выходе</string>
+    <string name="banner_cycle">Цикл будильника идёт</string>
+    <string name="banner_leave">Выход в %1$s</string>
+    <string name="banner_stop">Остановить</string>
+    <string name="stop_signals_title">Остановить сигналы?</string>
+    <string name="stop_signals_text">Сигналы и напоминания этого цикла остановятся. Будильник останется включённым и зазвонит в следующий раз по расписанию.</string>
+    <string name="yes_stop">Да, остановить</string>
+    <string name="cancel">Отмена</string>
+    <string name="done">Готово</string>
+    <string name="delete">Удалить</string>
+
+    <string name="alarm_leave_days">Выход в %1$s · %2$s</string>
+    <string name="alarm_next_signal">Ближайший сигнал: %1$s</string>
+
+    <string name="editor_title">Будильник</string>
+    <string name="back">Назад</string>
+    <string name="editor_enabled">Будильник включён</string>
+    <string name="editor_enabled_hint">Пока выключен, сигналы не звучат</string>
+    <string name="editor_time">Время</string>
+    <string name="editor_wake">Пробуждение</string>
+    <string name="editor_leave">Выход</string>
+    <string name="editor_departure_only">Задавать только время выхода</string>
+    <string name="editor_departure_only_hint">Пробуждение посчитается от времени на сборы</string>
+    <string name="editor_preparation">Время на сборы</string>
+    <string name="editor_preparation_range">От пробуждения до выхода</string>
+    <string name="editor_days">Дни недели</string>
+    <string name="editor_delete">Удалить будильник</string>
+    <string name="delete_alarm_title">Удалить будильник?</string>
+    <string name="delete_alarm_text">Будильник %1$s — выход в %2$s будет удалён насовсем.</string>
+    <string name="days_all">Каждый день</string>
+    <string name="days_weekdays">Будни</string>
+    <string name="days_weekend">Выходные</string>
+    <string name="days_need_one">Должен оставаться хотя бы один день.</string>
+    <string name="days_none">Дни не выбраны</string>
+
+    <string name="day_mon">Пн</string>
+    <string name="day_tue">Вт</string>
+    <string name="day_wed">Ср</string>
+    <string name="day_thu">Чт</string>
+    <string name="day_fri">Пт</string>
+    <string name="day_sat">Сб</string>
+    <string name="day_sun">Вс</string>
+
+    <string name="settings_title">Настройки</string>
+    <string name="settings_next_signal">Ближайший сигнал</string>
+    <string name="settings_no_alarms">Нет включённых будильников.</string>
+    <string name="settings_next_soon">Ближайший будильник включится меньше чем через минуту</string>
+    <string name="settings_next_in">Ближайший будильник включится через %1$s</string>
+    <string name="settings_when_days">%1$s · %2$s</string>
+
+    <string name="settings_signals">Сигналы</string>
+    <string name="settings_signals_hint">Как часто играет музыка от пробуждения до выхода.</string>
+    <string name="settings_interval">Минут между сигналами</string>
+    <string name="settings_voice">Голос</string>
+    <string name="settings_announce_signals">Объявлять время на сигналах</string>
+    <string name="settings_announce_departure">Объявлять время на напоминаниях о выходе</string>
+    <string name="settings_announce_late">Объявлять время при опоздании</string>
+    <string name="settings_tts_lead">Начинать голос за</string>
+    <string name="settings_ring_duration">Длительность сигнала</string>
+    <string name="settings_ring_plays">Музыка играет</string>
+    <string name="seconds">%1$d с</string>
+    <string name="settings_notifications">Уведомления</string>
+    <string name="settings_pre_notify">Напоминать за 12 часов</string>
+    <string name="settings_pre_notify_hint">В шторке будет видно время пробуждения и выхода</string>
+    <string name="settings_appearance">Оформление</string>
+    <string name="settings_dark_theme">Тёмная тема</string>
+    <string name="settings_dark_theme_hint">Светлый или тёмный вид приложения</string>
+    <string name="settings_language">Язык</string>
+    <string name="language_system">Системный</string>
+    <string name="settings_diagnostics">Диагностика</string>
+    <string name="settings_diagnostics_text">Если будильник сработал не так, как ожидалось, отправьте журнал — в нём видно, что происходило на устройстве.</string>
+    <string name="settings_send_logs">Отправить логи</string>
+
+    <string name="permissions_title">Разрешения и предупреждения</string>
+    <string name="permission_missing_hint">Не разрешено — будильник может не сработать</string>
+    <string name="perm_exact">Точные будильники</string>
+    <string name="perm_notifications">Уведомления</string>
+    <string name="perm_battery">Исключение из экономии батареи</string>
+    <string name="perm_fullscreen">Полноэкранные уведомления</string>
+    <string name="perm_turn_screen">Включение экрана</string>
+    <string name="perm_ring_channel">Громкий канал «Сигнал будильника»</string>
+    <string name="perm_volume">Звук будильника выключен — сигнала не будет слышно</string>
+    <string name="perm_dnd_access">Доступ к режиму «Не беспокоить»</string>
+    <string name="perm_dnd_access_hint">Без доступа приложение не узнает, глушит ли режим будильник</string>
+    <string name="perm_dnd_blocks">Режим «Не беспокоить» может заглушать будильник</string>
+    <string name="action_configure">Настроить</string>
+    <string name="action_allow">Разрешить</string>
+    <string name="action_fix">Исправить</string>
+
+    <string name="time_invalid">Введите часы 0–23 и минуты 0–59</string>
+
+    <plurals name="until_departure">
+        <item quantity="one">До выхода %1$d минута</item>
+        <item quantity="few">До выхода %1$d минуты</item>
+        <item quantity="many">До выхода %1$d минут</item>
+        <item quantity="other">До выхода %1$d минуты</item>
+    </plurals>
+    <string name="time_to_leave">Пора выходить</string>
+    <string name="ring_wake_leave">Пробуждение %1$s · выход %2$s</string>
+    <string name="ring_stop_title">Остановить сигналы?</string>
+    <string name="ring_silence">Тишина</string>
+    <string name="ring_silence_hint">Остановить музыку, будильник останется</string>
+    <string name="ring_silence_hint_late">Остановить голос до следующей минуты</string>
+    <string name="ring_remind">Остановить музыку, но напомнить о выходе</string>
+    <string name="ring_remind_hint">Голос за 20, 15, 10 и 5 минут и в момент выхода</string>
+    <string name="ring_remind_hint_late">«Пора выходить» — затем тишина до следующего сигнала</string>
+    <string name="ring_stop">Остановить сигналы</string>
+    <string name="ring_stop_hint">Остановить музыку и все напоминания на сегодня</string>
+    <string name="confirm_title">Вы уверены?</string>
+    <string name="confirm_stop_text">Музыка и голосовые напоминания этого цикла остановятся. Будильник останется включённым: следующее срабатывание — по расписанию.</string>
+    <string name="confirm_remind_text">Музыка остановится, а голосовые напоминания о выходе останутся: они прозвучат за 20, 15, 10 и 5 минут и в момент выхода.</string>
+    <string name="confirm_remind_text_late">Музыка остановится, но голос «Пора выходить» прозвучит в момент выхода. После этого будильник выключится без напоминаний об опоздании.</string>
+    <string name="yes_remind">Да, напомнить</string>
+
+    <string name="channel_status">Будильник заведён</string>
+    <string name="channel_status_desc">Расписание и напоминания об опоздании</string>
+    <string name="channel_ringing">Сигнал будильника</string>
+    <string name="channel_ringing_desc">Музыка и голосовые объявления до выхода</string>
+    <string name="notif_scheduled_title">Будильник заведён</string>
+    <string name="notif_scheduled_text">Пробуждение в %1$s · выход в %2$s</string>
+    <string name="notif_active_title">Будильник заведён</string>
+    <string name="notif_leave_title">Пора выходить</string>
+    <string name="notif_active_text">%1$s\nПробуждение в %2$s · выход в %3$s</string>
+    <string name="notif_ringing_title">Пора вставать</string>
+    <string name="notif_snooze">Отложить</string>
+    <string name="notif_remind">Напомнить</string>
+    <string name="notif_stop">Остановить</string>
+    <string name="notif_starting_title">На выход</string>
+    <string name="notif_starting_text">Подготовка сигнала…</string>
+    <string name="notif_reminders_title">Напоминания о выходе</string>
+    <string name="notif_reminders_text">Без музыки · выход в %1$s. Голос за 20, 15, 10 и 5 минут и в момент выхода. После этого — без напоминаний.</string>
+    <string name="notif_late_title">Вы опоздали</string>
+
+    <string name="duration_h">%1$d ч</string>
+    <string name="duration_m">%1$d мин</string>
+    <string name="duration_hm">%1$d ч %2$d мин</string>
+
+    <string name="when_today">сегодня, %1$s</string>
+    <string name="when_tomorrow">завтра, %1$s</string>
+    <string name="when_day">%1$s, %2$s</string>
+
+    <string name="logs_empty">Логов пока нет</string>
+    <string name="logs_share_title">Отправить логи</string>
+    <string name="logs_share_subject">Логи приложения «На выход»</string>
+    <string name="logs_share_text">Диагностические логи будильника. Архив может содержать сведения об устройстве и расписании.</string>
+    <string name="logs_share_failed">Не удалось открыть отправку логов</string>
+</resources>

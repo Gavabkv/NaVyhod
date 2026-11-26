@@ -5,6 +5,7 @@ import android.content.Intent
 import android.media.AudioManager
 import android.app.NotificationManager
 import android.provider.Settings
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -13,25 +14,36 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
 import com.example.dovykhoda.AlarmItem
 import com.example.dovykhoda.AlarmScheduler
 import com.example.dovykhoda.AlarmSettings
+import com.example.dovykhoda.LocaleHelper
 import com.example.dovykhoda.MainActivity
+import com.example.dovykhoda.R
 import com.example.dovykhoda.SchedulePlanner
 import com.example.dovykhoda.SettingsStore
 import com.example.dovykhoda.StatusNotifier
@@ -44,8 +56,10 @@ fun SettingsTab(
     stoppedCycle: SettingsStore.StoppedCycle?,
     nowMillis: Long,
     darkTheme: Boolean,
+    languageTag: String?,
     onChange: (AlarmSettings) -> Unit,
     onDarkThemeChange: (Boolean) -> Unit,
+    onLanguageChange: (String?) -> Unit,
     onRequestExactAlarms: () -> Unit,
     onRequestNotifications: () -> Unit,
     onRequestBatteryExemption: () -> Unit,
@@ -76,21 +90,21 @@ fun SettingsTab(
             .padding(horizontal = 16.dp, vertical = 16.dp),
     ) {
         Text(
-            "Настройки",
+            stringResource(R.string.settings_title),
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.SemiBold,
             modifier = Modifier.testTag("settings_title"),
         )
         Spacer(Modifier.height(12.dp))
 
-        ScreenCard("Ближайший сигнал") {
+        ScreenCard(stringResource(R.string.settings_next_signal)) {
             NextSignalInfo(alarms, settings, activeCycle, stoppedCycle, nowMillis)
         }
         Spacer(Modifier.height(12.dp))
 
-        ScreenCard("Сигналы") {
+        ScreenCard(stringResource(R.string.settings_signals)) {
             Text(
-                "Как часто играет музыка от пробуждения до выхода.",
+                stringResource(R.string.settings_signals_hint),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -105,35 +119,35 @@ fun SettingsTab(
                 }
             }
             Text(
-                "Минут между сигналами",
+                stringResource(R.string.settings_interval),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         Spacer(Modifier.height(12.dp))
 
-        ScreenCard("Голос") {
+        ScreenCard(stringResource(R.string.settings_voice)) {
             ToggleRow(
-                title = "Объявлять время на сигналах",
+                title = stringResource(R.string.settings_announce_signals),
                 checked = settings.announceTimeOnSignals,
                 tag = "time_signals",
                 onCheckedChange = { onChange(settings.copy(announceTimeOnSignals = it)) },
             )
             ToggleRow(
-                title = "Объявлять время на напоминаниях о выходе",
+                title = stringResource(R.string.settings_announce_departure),
                 checked = settings.announceTimeOnDeparture,
                 tag = "time_departure",
                 onCheckedChange = { onChange(settings.copy(announceTimeOnDeparture = it)) },
             )
             ToggleRow(
-                title = "Объявлять время при опоздании",
+                title = stringResource(R.string.settings_announce_late),
                 checked = settings.announceTimeOnLate,
                 tag = "time_late",
                 onCheckedChange = { onChange(settings.copy(announceTimeOnLate = it)) },
             )
             Spacer(Modifier.height(8.dp))
             ValueSlider(
-                title = "Начинать голос за",
+                title = stringResource(R.string.settings_tts_lead),
                 valueLabel = formatDuration(settings.ttsLeadMinutes),
                 value = settings.ttsLeadMinutes,
                 range = 5..120,
@@ -144,10 +158,10 @@ fun SettingsTab(
         }
         Spacer(Modifier.height(12.dp))
 
-        ScreenCard("Длительность сигнала") {
+        ScreenCard(stringResource(R.string.settings_ring_duration)) {
             ValueSlider(
-                title = "Музыка играет",
-                valueLabel = "${settings.ringSeconds} с",
+                title = stringResource(R.string.settings_ring_plays),
+                valueLabel = stringResource(R.string.seconds, settings.ringSeconds),
                 value = settings.ringSeconds,
                 range = 20..60,
                 step = 5,
@@ -157,85 +171,98 @@ fun SettingsTab(
         }
         Spacer(Modifier.height(12.dp))
 
-        ScreenCard("Уведомления") {
+        ScreenCard(stringResource(R.string.settings_notifications)) {
             ToggleRow(
-                title = "Напоминать за 12 часов",
-                subtitle = "В шторке будет видно время пробуждения и выхода",
+                title = stringResource(R.string.settings_pre_notify),
+                subtitle = stringResource(R.string.settings_pre_notify_hint),
                 checked = settings.preNotifyEnabled,
                 tag = "pre_notify",
                 onCheckedChange = { onChange(settings.copy(preNotifyEnabled = it)) },
             )
         }
 
+        val missingHint = stringResource(R.string.permission_missing_hint)
+        val configure = stringResource(R.string.action_configure)
+        val allow = stringResource(R.string.action_allow)
         val permissionIssues = buildList {
             if (!exactAllowed) add(
-                PermissionIssue("Точные будильники", "perm_exact", "Настроить", onRequestExactAlarms),
+                PermissionIssue(stringResource(R.string.perm_exact), "perm_exact", configure, onRequestExactAlarms),
             )
             if (!notificationsAllowed) add(
-                PermissionIssue("Уведомления", "perm_notifications", "Разрешить", onRequestNotifications),
+                PermissionIssue(
+                    stringResource(R.string.perm_notifications),
+                    "perm_notifications",
+                    allow,
+                    onRequestNotifications,
+                ),
             )
             if (!batteryExempt) add(
                 PermissionIssue(
-                    "Исключение из экономии батареи",
+                    stringResource(R.string.perm_battery),
                     "perm_battery",
-                    "Настроить",
+                    configure,
                     onRequestBatteryExemption,
                 ),
             )
             if (!fullScreenAllowed) add(
                 PermissionIssue(
-                    "Полноэкранные уведомления",
+                    stringResource(R.string.perm_fullscreen),
                     "perm_fullscreen",
-                    "Разрешить",
+                    allow,
                     onRequestFullScreenIntent,
                 ),
             )
             if (!turnScreenAllowed) add(
-                PermissionIssue("Включение экрана", "perm_turn_screen", "Разрешить", onRequestTurnScreenOn),
+                PermissionIssue(
+                    stringResource(R.string.perm_turn_screen),
+                    "perm_turn_screen",
+                    allow,
+                    onRequestTurnScreenOn,
+                ),
             )
             if (!ringChannelAllowed) add(
                 PermissionIssue(
-                    "Громкий канал «Сигнал будильника»",
+                    stringResource(R.string.perm_ring_channel),
                     "perm_ring_channel",
-                    "Настроить",
+                    configure,
                     onRequestRingChannel,
                 ),
             )
             if (volumeMuted) add(
                 PermissionIssue(
-                    "Звук будильника выключен — сигнала не будет слышно",
+                    stringResource(R.string.perm_volume),
                     "alarm_volume_muted",
-                    "Исправить",
+                    stringResource(R.string.action_fix),
                     { openSettings(context, Settings.ACTION_SOUND_SETTINGS) },
                 ),
             )
             if (!dndAccess) add(
                 PermissionIssue(
-                    "Доступ к режиму «Не беспокоить»",
+                    stringResource(R.string.perm_dnd_access),
                     "perm_dnd_access",
-                    "Разрешить",
+                    allow,
                     onRequestDndAccess,
-                    "Без доступа приложение не узнает, глушит ли режим будильник",
+                    stringResource(R.string.perm_dnd_access_hint),
                 ),
             )
             if (dndBlocks) add(
                 PermissionIssue(
-                    "Режим «Не беспокоить» может заглушать будильник",
+                    stringResource(R.string.perm_dnd_blocks),
                     "dnd_blocks_alarms",
-                    "Настроить",
+                    configure,
                     { openSettings(context, Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS) },
                 ),
             )
         }
         if (permissionIssues.isNotEmpty()) {
             Spacer(Modifier.height(12.dp))
-            ScreenCard("Разрешения и предупреждения") {
+            ScreenCard(stringResource(R.string.permissions_title)) {
                 permissionIssues.forEach { issue ->
                     PermissionRow(
                         text = issue.text,
                         tag = issue.tag,
                         action = issue.action,
-                        subtitle = issue.subtitle,
+                        subtitle = issue.subtitle ?: missingHint,
                         onAction = issue.onAction,
                     )
                 }
@@ -243,10 +270,10 @@ fun SettingsTab(
         }
         Spacer(Modifier.height(12.dp))
 
-        ScreenCard("Оформление") {
+        ScreenCard(stringResource(R.string.settings_appearance)) {
             ToggleRow(
-                title = "Тёмная тема",
-                subtitle = "Светлый или тёмный вид приложения",
+                title = stringResource(R.string.settings_dark_theme),
+                subtitle = stringResource(R.string.settings_dark_theme_hint),
                 checked = darkTheme,
                 tag = "theme_dark",
                 onCheckedChange = onDarkThemeChange,
@@ -254,19 +281,103 @@ fun SettingsTab(
         }
         Spacer(Modifier.height(12.dp))
 
-        ScreenCard("Диагностика") {
+        LanguageCard(languageTag, onLanguageChange)
+        Spacer(Modifier.height(12.dp))
+
+        ScreenCard(stringResource(R.string.settings_diagnostics)) {
             Text(
-                "Если будильник сработал не так, как ожидалось, отправьте журнал — " +
-                    "в нём видно, что происходило на устройстве.",
+                stringResource(R.string.settings_diagnostics_text),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(Modifier.height(8.dp))
             OutlinedButton(onClick = onExportLogs, modifier = Modifier.fillMaxWidth()) {
-                Text("Отправить логи")
+                Text(stringResource(R.string.settings_send_logs))
             }
         }
         Spacer(Modifier.height(24.dp))
+    }
+}
+
+@Composable
+private fun LanguageCard(currentTag: String?, onLanguageChange: (String?) -> Unit) {
+    var showDialog by remember { mutableStateOf(false) }
+    val currentLabel = currentTag?.let { LocaleHelper.label(it) }
+        ?: stringResource(R.string.language_system)
+    ScreenCard(stringResource(R.string.settings_language)) {
+        Surface(
+            onClick = { showDialog = true },
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            modifier = Modifier.fillMaxWidth().testTag("language_picker"),
+        ) {
+            Row(
+                Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    stringResource(R.string.settings_language),
+                    Modifier.weight(1f),
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+                Text(
+                    currentLabel,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
+    }
+    if (showDialog) {
+        AlertDialog(
+            onDismissRequest = { showDialog = false },
+            title = { Text(stringResource(R.string.settings_language)) },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState())) {
+                    LanguageOption(
+                        label = stringResource(R.string.language_system),
+                        selected = currentTag == null,
+                        tag = "language_option_system",
+                    ) {
+                        showDialog = false
+                        onLanguageChange(null)
+                    }
+                    LocaleHelper.LANGUAGES.filter { it.tag != null }.forEach { language ->
+                        LanguageOption(
+                            label = language.label,
+                            selected = language.tag == currentTag,
+                            tag = "language_option_${language.tag}",
+                        ) {
+                            showDialog = false
+                            onLanguageChange(language.tag)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            },
+        )
+    }
+}
+
+@Composable
+private fun LanguageOption(
+    label: String,
+    selected: Boolean,
+    tag: String,
+    onSelect: () -> Unit,
+) {
+    Row(
+        Modifier.fillMaxWidth().clickable(onClick = onSelect)
+            .padding(vertical = 8.dp).testTag(tag),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(selected = selected, onClick = onSelect)
+        Spacer(Modifier.width(8.dp))
+        Text(label, style = MaterialTheme.typography.bodyLarge)
     }
 }
 
@@ -280,11 +391,13 @@ private fun NextSignalInfo(
 ) {
     if (activeCycle != null) {
         Text(
-            if (activeCycle.remindersOnly) "Идут напоминания о выходе" else "Цикл будильника идёт",
+            stringResource(
+                if (activeCycle.remindersOnly) R.string.banner_reminders else R.string.banner_cycle,
+            ),
             style = MaterialTheme.typography.bodyLarge,
         )
         Text(
-            "Выход в ${formatClock(activeCycle.leaveMillis)}",
+            stringResource(R.string.banner_leave, formatClock(activeCycle.leaveMillis)),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -296,7 +409,7 @@ private fun NextSignalInfo(
     }.minByOrNull { it.second.atMillis }
     if (next == null) {
         Text(
-            "Нет включённых будильников.",
+            stringResource(R.string.settings_no_alarms),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -304,14 +417,13 @@ private fun NextSignalInfo(
     }
     val (alarm, trigger) = next
     val minutesUntil = (trigger.atMillis - nowMillis + 59_999L) / 60_000L
-    val whenText = if (minutesUntil <= 0L) "меньше чем через минуту"
-    else "через ${formatDuration(minutesUntil.toInt())}"
     Text(
-        "Ближайший будильник включится $whenText",
+        if (minutesUntil <= 0L) stringResource(R.string.settings_next_soon)
+        else stringResource(R.string.settings_next_in, formatDuration(minutesUntil.toInt())),
         style = MaterialTheme.typography.bodyLarge,
     )
     Text(
-        "${formatWhen(trigger.atMillis, nowMillis)} · ${alarm.daysLabel}",
+        stringResource(R.string.settings_when_days, formatWhen(trigger.atMillis, nowMillis), daysLabel(alarm.days)),
         style = MaterialTheme.typography.bodyMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -322,7 +434,7 @@ private fun PermissionRow(
     text: String,
     tag: String,
     action: String,
-    subtitle: String = "Не разрешено — будильник может не сработать",
+    subtitle: String,
     onAction: () -> Unit,
 ) {
     Row(
@@ -352,7 +464,7 @@ private data class PermissionIssue(
     val tag: String,
     val action: String,
     val onAction: () -> Unit,
-    val subtitle: String = "Не разрешено — будильник может не сработать",
+    val subtitle: String? = null,
 )
 
 private fun openSettings(context: Context, action: String) {

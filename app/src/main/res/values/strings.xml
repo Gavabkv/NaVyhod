@@ -1,4 +1,155 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">На выход</string>
+    <string name="app_name">Time to Leave</string>
+
+    <string name="tab_alarms">Alarms</string>
+    <string name="tab_settings">Settings</string>
+
+    <string name="alarms_title">Alarms</string>
+    <string name="alarms_add">Add</string>
+    <string name="alarms_empty">No alarms yet. Tap “Add” to create the first one.</string>
+    <string name="banner_reminders">Departure reminders are running</string>
+    <string name="banner_cycle">Alarm cycle in progress</string>
+    <string name="banner_leave">Leave at %1$s</string>
+    <string name="banner_stop">Stop</string>
+    <string name="stop_signals_title">Stop the signals?</string>
+    <string name="stop_signals_text">The signals and reminders of this cycle will stop. The alarm stays on and will ring again next time as scheduled.</string>
+    <string name="yes_stop">Yes, stop</string>
+    <string name="cancel">Cancel</string>
+    <string name="done">Done</string>
+    <string name="delete">Delete</string>
+
+    <string name="alarm_leave_days">Leave at %1$s · %2$s</string>
+    <string name="alarm_next_signal">Next signal: %1$s</string>
+
+    <string name="editor_title">Alarm</string>
+    <string name="back">Back</string>
+    <string name="editor_enabled">Alarm is on</string>
+    <string name="editor_enabled_hint">While off, no signals play</string>
+    <string name="editor_time">Time</string>
+    <string name="editor_wake">Wake up</string>
+    <string name="editor_leave">Leave</string>
+    <string name="editor_departure_only">Set the departure time only</string>
+    <string name="editor_departure_only_hint">Wake-up time is calculated from the preparation time</string>
+    <string name="editor_preparation">Preparation time</string>
+    <string name="editor_preparation_range">From wake-up to departure</string>
+    <string name="editor_days">Days of the week</string>
+    <string name="editor_delete">Delete alarm</string>
+    <string name="delete_alarm_title">Delete the alarm?</string>
+    <string name="delete_alarm_text">Alarm %1$s — leaving at %2$s will be deleted permanently.</string>
+    <string name="days_all">Every day</string>
+    <string name="days_weekdays">Weekdays</string>
+    <string name="days_weekend">Weekends</string>
+    <string name="days_need_one">At least one day must stay selected.</string>
+    <string name="days_none">No days selected</string>
+
+    <string name="day_mon">Mon</string>
+    <string name="day_tue">Tue</string>
+    <string name="day_wed">Wed</string>
+    <string name="day_thu">Thu</string>
+    <string name="day_fri">Fri</string>
+    <string name="day_sat">Sat</string>
+    <string name="day_sun">Sun</string>
+
+    <string name="settings_title">Settings</string>
+    <string name="settings_next_signal">Next signal</string>
+    <string name="settings_no_alarms">No alarms are on.</string>
+    <string name="settings_next_soon">The next alarm will ring in less than a minute</string>
+    <string name="settings_next_in">The next alarm will ring in %1$s</string>
+    <string name="settings_when_days">%1$s · %2$s</string>
+
+    <string name="settings_signals">Signals</string>
+    <string name="settings_signals_hint">How often music plays from waking up until departure.</string>
+    <string name="settings_interval">Minutes between signals</string>
+    <string name="settings_voice">Voice</string>
+    <string name="settings_announce_signals">Announce the time on signals</string>
+    <string name="settings_announce_departure">Announce the time on departure reminders</string>
+    <string name="settings_announce_late">Announce the time when late</string>
+    <string name="settings_tts_lead">Voice starts</string>
+    <string name="settings_ring_duration">Signal duration</string>
+    <string name="settings_ring_plays">Music plays for</string>
+    <string name="seconds">%1$d s</string>
+    <string name="settings_notifications">Notifications</string>
+    <string name="settings_pre_notify">Remind 12 hours ahead</string>
+    <string name="settings_pre_notify_hint">The notification shade shows wake and departure times</string>
+    <string name="settings_appearance">Appearance</string>
+    <string name="settings_dark_theme">Dark theme</string>
+    <string name="settings_dark_theme_hint">Light or dark look of the app</string>
+    <string name="settings_language">Language</string>
+    <string name="language_system">System</string>
+    <string name="settings_diagnostics">Diagnostics</string>
+    <string name="settings_diagnostics_text">If the alarm did not work as expected, send the log — it shows what happened on the device.</string>
+    <string name="settings_send_logs">Send logs</string>
+
+    <string name="permissions_title">Permissions and warnings</string>
+    <string name="permission_missing_hint">Not allowed — the alarm may not ring</string>
+    <string name="perm_exact">Exact alarms</string>
+    <string name="perm_notifications">Notifications</string>
+    <string name="perm_battery">Battery optimization exemption</string>
+    <string name="perm_fullscreen">Full-screen notifications</string>
+    <string name="perm_turn_screen">Turn screen on</string>
+    <string name="perm_ring_channel">Loud channel “Alarm signal”</string>
+    <string name="perm_volume">Alarm sound is off — the signal won’t be heard</string>
+    <string name="perm_dnd_access">Do Not Disturb access</string>
+    <string name="perm_dnd_access_hint">Without access the app cannot tell whether the mode mutes the alarm</string>
+    <string name="perm_dnd_blocks">Do Not Disturb may mute the alarm</string>
+    <string name="action_configure">Configure</string>
+    <string name="action_allow">Allow</string>
+    <string name="action_fix">Fix</string>
+
+    <string name="time_invalid">Enter hours 0–23 and minutes 0–59</string>
+
+    <plurals name="until_departure">
+        <item quantity="one">%1$d minute until departure</item>
+        <item quantity="other">%1$d minutes until departure</item>
+    </plurals>
+    <string name="time_to_leave">Time to leave</string>
+    <string name="ring_wake_leave">Wake %1$s · leave %2$s</string>
+    <string name="ring_stop_title">Stop the signals?</string>
+    <string name="ring_silence">Silence</string>
+    <string name="ring_silence_hint">Stop the music, the alarm stays on</string>
+    <string name="ring_silence_hint_late">Stop the voice until the next minute</string>
+    <string name="ring_remind">Stop music, but remind me to leave</string>
+    <string name="ring_remind_hint">Voice at 20, 15, 10 and 5 minutes and at departure</string>
+    <string name="ring_remind_hint_late">“Time to leave” — then silence until the next signal</string>
+    <string name="ring_stop">Stop the signals</string>
+    <string name="ring_stop_hint">Stop music and all reminders for today</string>
+    <string name="confirm_title">Are you sure?</string>
+    <string name="confirm_stop_text">The music and voice reminders of this cycle will stop. The alarm stays on: it will ring again as scheduled.</string>
+    <string name="confirm_remind_text">The music will stop, but departure voice reminders will stay: they will play at 20, 15, 10 and 5 minutes and at departure.</string>
+    <string name="confirm_remind_text_late">The music will stop, but the voice “Time to leave” will play at departure. After that the alarm turns off with no late reminders.</string>
+    <string name="yes_remind">Yes, remind</string>
+
+    <string name="channel_status">Alarm scheduled</string>
+    <string name="channel_status_desc">Schedule and late reminders</string>
+    <string name="channel_ringing">Alarm signal</string>
+    <string name="channel_ringing_desc">Music and voice announcements until departure</string>
+    <string name="notif_scheduled_title">Alarm scheduled</string>
+    <string name="notif_scheduled_text">Wake at %1$s · leave at %2$s</string>
+    <string name="notif_active_title">Alarm scheduled</string>
+    <string name="notif_leave_title">Time to leave</string>
+    <string name="notif_active_text">%1$s\nWake at %2$s · leave at %3$s</string>
+    <string name="notif_ringing_title">Time to get up</string>
+    <string name="notif_snooze">Snooze</string>
+    <string name="notif_remind">Remind</string>
+    <string name="notif_stop">Stop</string>
+    <string name="notif_starting_title">Time to Leave</string>
+    <string name="notif_starting_text">Preparing the signal…</string>
+    <string name="notif_reminders_title">Departure reminders</string>
+    <string name="notif_reminders_text">No music · leave at %1$s. Voice at 20, 15, 10 and 5 minutes and at departure. After that, no reminders.</string>
+    <string name="notif_late_title">You are late</string>
+
+    <string name="duration_h">%1$d h</string>
+    <string name="duration_m">%1$d min</string>
+    <string name="duration_hm">%1$d h %2$d min</string>
+
+    <string name="when_today">today, %1$s</string>
+    <string name="when_tomorrow">tomorrow, %1$s</string>
+    <string name="when_day">%1$s, %2$s</string>
+
+    <string name="logs_empty">No logs yet</string>
+    <string name="logs_share_title">Send logs</string>
+    <string name="logs_share_subject">“Time to Leave” app logs</string>
+    <string name="logs_share_text">Alarm diagnostic logs. The archive may contain device details and your schedule.</string>
+    <string name="logs_share_failed">Couldn’t open the log sharing screen</string>
 </resources>

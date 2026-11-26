@@ -45,9 +45,14 @@ class MainActivity : ComponentActivity() {
         BatteryExemption("battery_exemption"),
     }
 
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(LocaleHelper.wrap(newBase))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        StatusNotifier.ensureChannels(this)
 
         setContent {
             var themeChoice by remember {
@@ -68,6 +73,10 @@ class MainActivity : ComponentActivity() {
                     onDarkThemeChange = { dark ->
                         SettingsStore(this@MainActivity).setDarkThemeChoice(dark)
                         themeChoice = dark
+                    },
+                    onLanguageChange = { tag ->
+                        SettingsStore(this@MainActivity).setLanguageTag(tag)
+                        recreate()
                     },
                 )
             }
@@ -223,7 +232,7 @@ class MainActivity : ComponentActivity() {
         lifecycleScope.launch {
             val zip = withContext(Dispatchers.IO) { AlarmLog.exportZip(this@MainActivity) }
             if (zip == null) {
-                Toast.makeText(this@MainActivity, "Логов пока нет", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this@MainActivity, getString(R.string.logs_empty), Toast.LENGTH_SHORT).show()
                 return@launch
             }
             val uri = androidx.core.content.FileProvider.getUriForFile(
@@ -232,14 +241,16 @@ class MainActivity : ComponentActivity() {
             val share = Intent(Intent.ACTION_SEND).apply {
                 type = "application/zip"
                 putExtra(Intent.EXTRA_STREAM, uri)
-                putExtra(Intent.EXTRA_SUBJECT, "Логи приложения «На выход»")
-                putExtra(Intent.EXTRA_TEXT, "Диагностические логи будильника. Архив может содержать сведения об устройстве и расписании.")
+                putExtra(Intent.EXTRA_SUBJECT, getString(R.string.logs_share_subject))
+                putExtra(Intent.EXTRA_TEXT, getString(R.string.logs_share_text))
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
-            runCatching { startActivity(Intent.createChooser(share, "Отправить логи")) }
+            runCatching { startActivity(Intent.createChooser(share, getString(R.string.logs_share_title))) }
                 .onFailure {
                     AlarmLog.failure("log_share_failed", it)
-                    Toast.makeText(this@MainActivity, "Не удалось открыть отправку логов", Toast.LENGTH_LONG).show()
+                    Toast.makeText(
+                        this@MainActivity, getString(R.string.logs_share_failed), Toast.LENGTH_LONG,
+                    ).show()
                 }
         }
     }

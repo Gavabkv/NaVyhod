@@ -42,7 +42,7 @@ import org.robolectric.annotation.Config
 import java.time.DayOfWeek
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+@Config(sdk = [34], qualifiers = "ru")
 class AlarmScreenTest {
     @get:Rule
     val compose = createComposeRule()
@@ -62,6 +62,7 @@ class AlarmScreenTest {
     private fun showScreen(
         darkTheme: Boolean = false,
         onDarkThemeChange: (Boolean) -> Unit = {},
+        onLanguageChange: (String?) -> Unit = {},
     ) {
         compose.setContent {
             NaVykhodTheme(darkTheme = darkTheme) {
@@ -76,6 +77,7 @@ class AlarmScreenTest {
                     onExportLogs = {},
                     darkTheme = darkTheme,
                     onDarkThemeChange = onDarkThemeChange,
+                    onLanguageChange = onLanguageChange,
                 )
             }
         }
@@ -337,6 +339,37 @@ class AlarmScreenTest {
         compose.onNodeWithTag("tab_settings").performClick()
         compose.onNodeWithTag("theme_dark").performScrollTo().assertIsOff().performClick()
         compose.runOnIdle { assertEquals(true, choice) }
+    }
+
+    @Test
+    fun `language card sits between theme and diagnostics`() {
+        showScreen()
+        compose.onNodeWithTag("tab_settings").performClick()
+        compose.onNodeWithTag("theme_dark").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("language_picker").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Системный").assertIsDisplayed()
+        compose.onNodeWithText("Отправить логи").performScrollTo().assertIsDisplayed()
+    }
+
+    @Test
+    fun `language picker reports the chosen language`() {
+        var choice: String? = "unset"
+        showScreen(onLanguageChange = { choice = it })
+        compose.onNodeWithTag("tab_settings").performClick()
+        compose.onNodeWithTag("language_picker").performScrollTo().performClick()
+        compose.onNodeWithTag("language_option_system").assertIsDisplayed()
+        compose.onNodeWithTag("language_option_de").performScrollTo().performClick()
+        compose.runOnIdle { assertEquals("de", choice) }
+    }
+
+    @Test
+    fun `language picker lists all supported languages`() {
+        showScreen()
+        compose.onNodeWithTag("tab_settings").performClick()
+        compose.onNodeWithTag("language_picker").performScrollTo().performClick()
+        for (tag in listOf("de", "en", "es", "fr", "it", "ja", "pt", "ru")) {
+            compose.onNodeWithTag("language_option_$tag").performScrollTo().assertIsDisplayed()
+        }
     }
 
     @Test

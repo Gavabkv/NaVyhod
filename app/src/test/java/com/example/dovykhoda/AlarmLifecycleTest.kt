@@ -31,7 +31,7 @@ import org.robolectric.shadows.ShadowPowerManager
 import org.robolectric.shadows.ShadowTextToSpeech
 
 @RunWith(RobolectricTestRunner::class)
-@Config(sdk = [34])
+@Config(sdk = [34], qualifiers = "ru")
 class AlarmLifecycleTest {
     private val context: Context get() = RuntimeEnvironment.getApplication()
     private var controller: ServiceController<AlarmService>? = null
@@ -1018,6 +1018,23 @@ class AlarmLifecycleTest {
         assertEquals(true, SettingsStore(context).darkThemeChoice())
         store.setDarkThemeChoice(false)
         assertEquals(false, SettingsStore(context).darkThemeChoice())
+    }
+
+    @Test
+    fun `language choice is remembered and switches the resources`() {
+        val store = SettingsStore(context)
+        assertNull(store.languageTag())
+        assertEquals("Будильники", LocaleHelper.wrap(context).getString(R.string.tab_alarms))
+        store.setLanguageTag("de")
+        assertEquals("de", SettingsStore(context).languageTag())
+        val german = LocaleHelper.wrap(context)
+        assertEquals("Alarme", german.getString(R.string.tab_alarms))
+        assertEquals("Einstellungen", german.getString(R.string.tab_settings))
+        store.setLanguageTag("ja")
+        assertEquals("ja", LocaleHelper.appLocale(LocaleHelper.wrap(context)).language)
+        store.setLanguageTag(null)
+        assertNull(SettingsStore(context).languageTag())
+        assertEquals("Будильники", LocaleHelper.wrap(context).getString(R.string.tab_alarms))
     }
 
     @Test

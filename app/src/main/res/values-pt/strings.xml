@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Hora de sair</string>
+
+    <string name="tab_alarms">Alarmes</string>
+    <string name="tab_settings">Ajustes</string>
+
+    <string name="alarms_title">Alarmes</string>
+    <string name="alarms_add">Adicionar</string>
+    <string name="alarms_empty">Ainda não há alarmes. Toque em «Adicionar» para criar o primeiro.</string>
+    <string name="banner_reminders">Lembretes de saída ativos</string>
+    <string name="banner_cycle">Ciclo do alarme em andamento</string>
+    <string name="banner_leave">Saída às %1$s</string>
+    <string name="banner_stop">Parar</string>
+    <string name="stop_signals_title">Parar os sinais?</string>
+    <string name="stop_signals_text">Os sinais e lembretes deste ciclo vão parar. O alarme continua ligado e tocará na próxima vez conforme o horário.</string>
+    <string name="yes_stop">Sim, parar</string>
+    <string name="cancel">Cancelar</string>
+    <string name="done">Concluir</string>
+    <string name="delete">Excluir</string>
+
+    <string name="alarm_leave_days">Saída às %1$s · %2$s</string>
+    <string name="alarm_next_signal">Próximo sinal: %1$s</string>
+
+    <string name="editor_title">Alarme</string>
+    <string name="back">Voltar</string>
+    <string name="editor_enabled">Alarme ligado</string>
+    <string name="editor_enabled_hint">Quando desligado, nenhum sinal toca</string>
+    <string name="editor_time">Hora</string>
+    <string name="editor_wake">Despertar</string>
+    <string name="editor_leave">Saída</string>
+    <string name="editor_departure_only">Definir apenas o horário de saída</string>
+    <string name="editor_departure_only_hint">O horário de despertar é calculado a partir do tempo de preparo</string>
+    <string name="editor_preparation">Tempo de preparo</string>
+    <string name="editor_preparation_range">Do despertar à saída</string>
+    <string name="editor_days">Dias da semana</string>
+    <string name="editor_delete">Excluir alarme</string>
+    <string name="delete_alarm_title">Excluir o alarme?</string>
+    <string name="delete_alarm_text">O alarme %1$s — saída às %2$s será excluído definitivamente.</string>
+    <string name="days_all">Todos os dias</string>
+    <string name="days_weekdays">Dias úteis</string>
+    <string name="days_weekend">Fins de semana</string>
+    <string name="days_need_one">Pelo menos um dia deve permanecer selecionado.</string>
+    <string name="days_none">Nenhum dia selecionado</string>
+
+    <string name="day_mon">Seg</string>
+    <string name="day_tue">Ter</string>
+    <string name="day_wed">Qua</string>
+    <string name="day_thu">Qui</string>
+    <string name="day_fri">Sex</string>
+    <string name="day_sat">Sáb</string>
+    <string name="day_sun">Dom</string>
+
+    <string name="settings_title">Ajustes</string>
+    <string name="settings_next_signal">Próximo sinal</string>
+    <string name="settings_no_alarms">Nenhum alarme ligado.</string>
+    <string name="settings_next_soon">O próximo alarme tocará em menos de um minuto</string>
+    <string name="settings_next_in">O próximo alarme tocará em %1$s</string>
+    <string name="settings_when_days">%1$s · %2$s</string>
+
+    <string name="settings_signals">Sinais</string>
+    <string name="settings_signals_hint">Com que frequência a música toca do despertar até a saída.</string>
+    <string name="settings_interval">Minutos entre sinais</string>
+    <string name="settings_voice">Voz</string>
+    <string name="settings_announce_signals">Anunciar a hora nos sinais</string>
+    <string name="settings_announce_departure">Anunciar a hora nos lembretes de saída</string>
+    <string name="settings_announce_late">Anunciar a hora quando atrasado</string>
+    <string name="settings_tts_lead">A voz começa</string>
+    <string name="settings_ring_duration">Duração do sinal</string>
+    <string name="settings_ring_plays">A música toca por</string>
+    <string name="seconds">%1$d s</string>
+    <string name="settings_notifications">Notificações</string>
+    <string name="settings_pre_notify">Lembrar 12 horas antes</string>
+    <string name="settings_pre_notify_hint">A notificação mostra os horários de despertar e saída</string>
+    <string name="settings_appearance">Aparência</string>
+    <string name="settings_dark_theme">Tema escuro</string>
+    <string name="settings_dark_theme_hint">Visual claro ou escuro do aplicativo</string>
+    <string name="settings_language">Idioma</string>
+    <string name="language_system">Sistema</string>
+    <string name="settings_diagnostics">Diagnóstico</string>
+    <string name="settings_diagnostics_text">Se o alarme não funcionou como esperado, envie o registro — nele se vê o que aconteceu no dispositivo.</string>
+    <string name="settings_send_logs">Enviar registros</string>
+
+    <string name="permissions_title">Permissões e avisos</string>
+    <string name="permission_missing_hint">Não permitido — o alarme pode não tocar</string>
+    <string name="perm_exact">Alarmes exatos</string>
+    <string name="perm_notifications">Notificações</string>
+    <string name="perm_battery">Isenção da otimização de bateria</string>
+    <string name="perm_fullscreen">Notificações em tela cheia</string>
+    <string name="perm_turn_screen">Ligar a tela</string>
+    <string name="perm_ring_channel">Canal alto «Sinal do alarme»</string>
+    <string name="perm_volume">O som do alarme está desligado — o sinal não será ouvido</string>
+    <string name="perm_dnd_access">Acesso a «Não perturbe»</string>
+    <string name="perm_dnd_access_hint">Sem acesso, o app não sabe se o modo silencia o alarme</string>
+    <string name="perm_dnd_blocks">«Não perturbe» pode silenciar o alarme</string>
+    <string name="action_configure">Configurar</string>
+    <string name="action_allow">Permitir</string>
+    <string name="action_fix">Corrigir</string>
+
+    <string name="time_invalid">Digite horas 0–23 e minutos 0–59</string>
+
+    <plurals name="until_departure">
+        <item quantity="one">Falta %1$d minuto para sair</item>
+        <item quantity="other">Faltam %1$d minutos para sair</item>
+    </plurals>
+    <string name="time_to_leave">Hora de sair</string>
+    <string name="ring_wake_leave">Despertar %1$s · saída %2$s</string>
+    <string name="ring_stop_title">Parar os sinais?</string>
+    <string name="ring_silence">Silêncio</string>
+    <string name="ring_silence_hint">Parar a música, o alarme continua ligado</string>
+    <string name="ring_silence_hint_late">Parar a voz até o próximo minuto</string>
+    <string name="ring_remind">Parar a música, mas lembrar da saída</string>
+    <string name="ring_remind_hint">Voz aos 20, 15, 10 e 5 minutos e na saída</string>
+    <string name="ring_remind_hint_late">«Hora de sair» — depois silêncio até o próximo sinal</string>
+    <string name="ring_stop">Parar os sinais</string>
+    <string name="ring_stop_hint">Parar a música e todos os lembretes de hoje</string>
+    <string name="confirm_title">Tem certeza?</string>
+    <string name="confirm_stop_text">A música e os lembretes de voz deste ciclo vão parar. O alarme continua ligado: tocará de novo conforme o horário.</string>
+    <string name="confirm_remind_text">A música vai parar, mas os lembretes de voz da saída permanecem: tocarão aos 20, 15, 10 e 5 minutos e na saída.</string>
+    <string name="confirm_remind_text_late">A música vai parar, mas a voz «Hora de sair» tocará na saída. Depois disso o alarme desliga sem lembretes de atraso.</string>
+    <string name="yes_remind">Sim, lembrar</string>
+
+    <string name="channel_status">Alarme definido</string>
+    <string name="channel_status_desc">Horário e lembretes de atraso</string>
+    <string name="channel_ringing">Sinal do alarme</string>
+    <string name="channel_ringing_desc">Música e anúncios de voz até a saída</string>
+    <string name="notif_scheduled_title">Alarme definido</string>
+    <string name="notif_scheduled_text">Despertar às %1$s · saída às %2$s</string>
+    <string name="notif_active_title">Alarme definido</string>
+    <string name="notif_leave_title">Hora de sair</string>
+    <string name="notif_active_text">%1$s\nDespertar às %2$s · saída às %3$s</string>
+    <string name="notif_ringing_title">Hora de levantar</string>
+    <string name="notif_snooze">Adiar</string>
+    <string name="notif_remind">Lembrar</string>
+    <string name="notif_stop">Parar</string>
+    <string name="notif_starting_title">Hora de sair</string>
+    <string name="notif_starting_text">Preparando o sinal…</string>
+    <string name="notif_reminders_title">Lembretes de saída</string>
+    <string name="notif_reminders_text">Sem música · saída às %1$s. Voz aos 20, 15, 10 e 5 minutos e na saída. Depois disso, sem lembretes.</string>
+    <string name="notif_late_title">Você está atrasado</string>
+
+    <string name="duration_h">%1$d h</string>
+    <string name="duration_m">%1$d min</string>
+    <string name="duration_hm">%1$d h %2$d min</string>
+
+    <string name="when_today">hoje, %1$s</string>
+    <string name="when_tomorrow">amanhã, %1$s</string>
+    <string name="when_day">%1$s, %2$s</string>
+
+    <string name="logs_empty">Ainda não há registros</string>
+    <string name="logs_share_title">Enviar registros</string>
+    <string name="logs_share_subject">Registros do app «Hora de sair»</string>
+    <string name="logs_share_text">Registros de diagnóstico do alarme. O arquivo pode conter dados do dispositivo e seu horário.</string>
+    <string name="logs_share_failed">Não foi possível abrir o envio de registros</string>
+</resources>

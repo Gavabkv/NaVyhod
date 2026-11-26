@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">È ora di uscire</string>
+
+    <string name="tab_alarms">Sveglie</string>
+    <string name="tab_settings">Impostazioni</string>
+
+    <string name="alarms_title">Sveglie</string>
+    <string name="alarms_add">Aggiungi</string>
+    <string name="alarms_empty">Nessuna sveglia. Tocca «Aggiungi» per crearne una.</string>
+    <string name="banner_reminders">Promemoria di uscita attivi</string>
+    <string name="banner_cycle">Ciclo della sveglia in corso</string>
+    <string name="banner_leave">Uscita alle %1$s</string>
+    <string name="banner_stop">Ferma</string>
+    <string name="stop_signals_title">Fermare i segnali?</string>
+    <string name="stop_signals_text">I segnali e i promemoria di questo ciclo si fermeranno. La sveglia resta attiva e suonerà la prossima volta secondo l’orario.</string>
+    <string name="yes_stop">Sì, ferma</string>
+    <string name="cancel">Annulla</string>
+    <string name="done">Fatto</string>
+    <string name="delete">Elimina</string>
+
+    <string name="alarm_leave_days">Uscita alle %1$s · %2$s</string>
+    <string name="alarm_next_signal">Prossimo segnale: %1$s</string>
+
+    <string name="editor_title">Sveglia</string>
+    <string name="back">Indietro</string>
+    <string name="editor_enabled">Sveglia attiva</string>
+    <string name="editor_enabled_hint">Quando è spenta non suona alcun segnale</string>
+    <string name="editor_time">Ora</string>
+    <string name="editor_wake">Risveglio</string>
+    <string name="editor_leave">Uscita</string>
+    <string name="editor_departure_only">Imposta solo l’orario di uscita</string>
+    <string name="editor_departure_only_hint">L’ora del risveglio è calcolata dal tempo di preparazione</string>
+    <string name="editor_preparation">Tempo di preparazione</string>
+    <string name="editor_preparation_range">Dal risveglio all’uscita</string>
+    <string name="editor_days">Giorni della settimana</string>
+    <string name="editor_delete">Elimina sveglia</string>
+    <string name="delete_alarm_title">Eliminare la sveglia?</string>
+    <string name="delete_alarm_text">La sveglia %1$s — uscita alle %2$s sarà eliminata definitivamente.</string>
+    <string name="days_all">Tutti i giorni</string>
+    <string name="days_weekdays">Giorni feriali</string>
+    <string name="days_weekend">Fine settimana</string>
+    <string name="days_need_one">Deve restare selezionato almeno un giorno.</string>
+    <string name="days_none">Nessun giorno selezionato</string>
+
+    <string name="day_mon">Lun</string>
+    <string name="day_tue">Mar</string>
+    <string name="day_wed">Mer</string>
+    <string name="day_thu">Gio</string>
+    <string name="day_fri">Ven</string>
+    <string name="day_sat">Sab</string>
+    <string name="day_sun">Dom</string>
+
+    <string name="settings_title">Impostazioni</string>
+    <string name="settings_next_signal">Prossimo segnale</string>
+    <string name="settings_no_alarms">Nessuna sveglia attiva.</string>
+    <string name="settings_next_soon">La prossima sveglia suonerà tra meno di un minuto</string>
+    <string name="settings_next_in">La prossima sveglia suonerà tra %1$s</string>
+    <string name="settings_when_days">%1$s · %2$s</string>
+
+    <string name="settings_signals">Segnali</string>
+    <string name="settings_signals_hint">Ogni quanto suona la musica dal risveglio all’uscita.</string>
+    <string name="settings_interval">Minuti tra i segnali</string>
+    <string name="settings_voice">Voce</string>
+    <string name="settings_announce_signals">Annuncia l’ora sui segnali</string>
+    <string name="settings_announce_departure">Annuncia l’ora nei promemoria di uscita</string>
+    <string name="settings_announce_late">Annuncia l’ora in caso di ritardo</string>
+    <string name="settings_tts_lead">La voce inizia</string>
+    <string name="settings_ring_duration">Durata del segnale</string>
+    <string name="settings_ring_plays">La musica suona per</string>
+    <string name="seconds">%1$d s</string>
+    <string name="settings_notifications">Notifiche</string>
+    <string name="settings_pre_notify">Ricorda 12 ore prima</string>
+    <string name="settings_pre_notify_hint">La notifica mostra gli orari di risveglio e uscita</string>
+    <string name="settings_appearance">Aspetto</string>
+    <string name="settings_dark_theme">Tema scuro</string>
+    <string name="settings_dark_theme_hint">Aspetto chiaro o scuro dell’app</string>
+    <string name="settings_language">Lingua</string>
+    <string name="language_system">Sistema</string>
+    <string name="settings_diagnostics">Diagnostica</string>
+    <string name="settings_diagnostics_text">Se la sveglia non ha funzionato come previsto, invia il registro: mostra cosa è successo sul dispositivo.</string>
+    <string name="settings_send_logs">Invia registri</string>
+
+    <string name="permissions_title">Autorizzazioni e avvisi</string>
+    <string name="permission_missing_hint">Non consentito — la sveglia potrebbe non suonare</string>
+    <string name="perm_exact">Sveglie esatte</string>
+    <string name="perm_notifications">Notifiche</string>
+    <string name="perm_battery">Esenzione dall’ottimizzazione della batteria</string>
+    <string name="perm_fullscreen">Notifiche a schermo intero</string>
+    <string name="perm_turn_screen">Accendi lo schermo</string>
+    <string name="perm_ring_channel">Canale forte «Segnale sveglia»</string>
+    <string name="perm_volume">Il volume della sveglia è spento — il segnale non sarà udibile</string>
+    <string name="perm_dnd_access">Accesso a «Non disturbare»</string>
+    <string name="perm_dnd_access_hint">Senza accesso l’app non sa se la modalità silenzia la sveglia</string>
+    <string name="perm_dnd_blocks">«Non disturbare» può silenziare la sveglia</string>
+    <string name="action_configure">Configura</string>
+    <string name="action_allow">Consenti</string>
+    <string name="action_fix">Correggi</string>
+
+    <string name="time_invalid">Inserisci ore 0–23 e minuti 0–59</string>
+
+    <plurals name="until_departure">
+        <item quantity="one">Manca %1$d minuto all’uscita</item>
+        <item quantity="other">Mancano %1$d minuti all’uscita</item>
+    </plurals>
+    <string name="time_to_leave">È ora di uscire</string>
+    <string name="ring_wake_leave">Risveglio %1$s · uscita %2$s</string>
+    <string name="ring_stop_title">Fermare i segnali?</string>
+    <string name="ring_silence">Silenzio</string>
+    <string name="ring_silence_hint">Ferma la musica, la sveglia resta attiva</string>
+    <string name="ring_silence_hint_late">Ferma la voce fino al prossimo minuto</string>
+    <string name="ring_remind">Ferma la musica ma ricorda l’uscita</string>
+    <string name="ring_remind_hint">Voce a 20, 15, 10 e 5 minuti e all’uscita</string>
+    <string name="ring_remind_hint_late">«È ora di uscire» — poi silenzio fino al prossimo segnale</string>
+    <string name="ring_stop">Ferma i segnali</string>
+    <string name="ring_stop_hint">Ferma la musica e tutti i promemoria di oggi</string>
+    <string name="confirm_title">Sei sicuro?</string>
+    <string name="confirm_stop_text">La musica e i promemoria vocali di questo ciclo si fermeranno. La sveglia resta attiva: suonerà di nuovo secondo l’orario.</string>
+    <string name="confirm_remind_text">La musica si fermerà, ma i promemoria vocali di uscita restano: suoneranno a 20, 15, 10 e 5 minuti e all’uscita.</string>
+    <string name="confirm_remind_text_late">La musica si fermerà, ma la voce «È ora di uscire» suonerà all’uscita. Dopodiché la sveglia si spegne senza promemoria di ritardo.</string>
+    <string name="yes_remind">Sì, ricorda</string>
+
+    <string name="channel_status">Sveglia impostata</string>
+    <string name="channel_status_desc">Orario e promemoria di ritardo</string>
+    <string name="channel_ringing">Segnale sveglia</string>
+    <string name="channel_ringing_desc">Musica e annunci vocali fino all’uscita</string>
+    <string name="notif_scheduled_title">Sveglia impostata</string>
+    <string name="notif_scheduled_text">Risveglio alle %1$s · uscita alle %2$s</string>
+    <string name="notif_active_title">Sveglia impostata</string>
+    <string name="notif_leave_title">È ora di uscire</string>
+    <string name="notif_active_text">%1$s\nRisveglio alle %2$s · uscita alle %3$s</string>
+    <string name="notif_ringing_title">È ora di alzarsi</string>
+    <string name="notif_snooze">Posticipa</string>
+    <string name="notif_remind">Ricorda</string>
+    <string name="notif_stop">Ferma</string>
+    <string name="notif_starting_title">È ora di uscire</string>
+    <string name="notif_starting_text">Preparazione del segnale…</string>
+    <string name="notif_reminders_title">Promemoria di uscita</string>
+    <string name="notif_reminders_text">Senza musica · uscita alle %1$s. Voce a 20, 15, 10 e 5 minuti e all’uscita. Poi niente più promemoria.</string>
+    <string name="notif_late_title">Sei in ritardo</string>
+
+    <string name="duration_h">%1$d h</string>
+    <string name="duration_m">%1$d min</string>
+    <string name="duration_hm">%1$d h %2$d min</string>
+
+    <string name="when_today">oggi, %1$s</string>
+    <string name="when_tomorrow">domani, %1$s</string>
+    <string name="when_day">%1$s, %2$s</string>
+
+    <string name="logs_empty">Ancora nessun registro</string>
+    <string name="logs_share_title">Invia registri</string>
+    <string name="logs_share_subject">Registri dell’app «È ora di uscire»</string>
+    <string name="logs_share_text">Registri di diagnostica della sveglia. L’archivio può contenere dati del dispositivo e il tuo orario.</string>
+    <string name="logs_share_failed">Impossibile aprire l’invio dei registri</string>
+</resources>

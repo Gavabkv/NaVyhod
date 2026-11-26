@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Zeit zu gehen</string>
+
+    <string name="tab_alarms">Alarme</string>
+    <string name="tab_settings">Einstellungen</string>
+
+    <string name="alarms_title">Alarme</string>
+    <string name="alarms_add">Hinzufügen</string>
+    <string name="alarms_empty">Noch keine Alarme. Tippen Sie auf „Hinzufügen“, um den ersten zu erstellen.</string>
+    <string name="banner_reminders">Erinnerungen an den Aufbruch laufen</string>
+    <string name="banner_cycle">Alarmzyklus läuft</string>
+    <string name="banner_leave">Aufbruch um %1$s</string>
+    <string name="banner_stop">Stoppen</string>
+    <string name="stop_signals_title">Signale stoppen?</string>
+    <string name="stop_signals_text">Signale und Erinnerungen dieses Zyklus werden gestoppt. Der Alarm bleibt eingeschaltet und klingelt das nächste Mal laut Zeitplan.</string>
+    <string name="yes_stop">Ja, stoppen</string>
+    <string name="cancel">Abbrechen</string>
+    <string name="done">Fertig</string>
+    <string name="delete">Löschen</string>
+
+    <string name="alarm_leave_days">Aufbruch um %1$s · %2$s</string>
+    <string name="alarm_next_signal">Nächstes Signal: %1$s</string>
+
+    <string name="editor_title">Alarm</string>
+    <string name="back">Zurück</string>
+    <string name="editor_enabled">Alarm ist eingeschaltet</string>
+    <string name="editor_enabled_hint">Wenn aus, ertönen keine Signale</string>
+    <string name="editor_time">Zeit</string>
+    <string name="editor_wake">Aufwachen</string>
+    <string name="editor_leave">Aufbruch</string>
+    <string name="editor_departure_only">Nur die Aufbruchszeit festlegen</string>
+    <string name="editor_departure_only_hint">Die Aufwachzeit wird aus der Vorbereitungszeit berechnet</string>
+    <string name="editor_preparation">Vorbereitungszeit</string>
+    <string name="editor_preparation_range">Vom Aufwachen bis zum Aufbruch</string>
+    <string name="editor_days">Wochentage</string>
+    <string name="editor_delete">Alarm löschen</string>
+    <string name="delete_alarm_title">Alarm löschen?</string>
+    <string name="delete_alarm_text">Der Alarm %1$s — Aufbruch um %2$s wird endgültig gelöscht.</string>
+    <string name="days_all">Jeden Tag</string>
+    <string name="days_weekdays">Werktags</string>
+    <string name="days_weekend">Am Wochenende</string>
+    <string name="days_need_one">Mindestens ein Tag muss ausgewählt bleiben.</string>
+    <string name="days_none">Keine Tage ausgewählt</string>
+
+    <string name="day_mon">Mo</string>
+    <string name="day_tue">Di</string>
+    <string name="day_wed">Mi</string>
+    <string name="day_thu">Do</string>
+    <string name="day_fri">Fr</string>
+    <string name="day_sat">Sa</string>
+    <string name="day_sun">So</string>
+
+    <string name="settings_title">Einstellungen</string>
+    <string name="settings_next_signal">Nächstes Signal</string>
+    <string name="settings_no_alarms">Keine Alarme eingeschaltet.</string>
+    <string name="settings_next_soon">Der nächste Alarm klingelt in weniger als einer Minute</string>
+    <string name="settings_next_in">Der nächste Alarm klingelt in %1$s</string>
+    <string name="settings_when_days">%1$s · %2$s</string>
+
+    <string name="settings_signals">Signale</string>
+    <string name="settings_signals_hint">Wie oft Musik vom Aufwachen bis zum Aufbruch spielt.</string>
+    <string name="settings_interval">Minuten zwischen den Signalen</string>
+    <string name="settings_voice">Stimme</string>
+    <string name="settings_announce_signals">Uhrzeit bei Signalen ansagen</string>
+    <string name="settings_announce_departure">Uhrzeit bei Aufbruch-Erinnerungen ansagen</string>
+    <string name="settings_announce_late">Uhrzeit bei Verspätung ansagen</string>
+    <string name="settings_tts_lead">Stimme beginnt</string>
+    <string name="settings_ring_duration">Signaldauer</string>
+    <string name="settings_ring_plays">Musik spielt</string>
+    <string name="seconds">%1$d s</string>
+    <string name="settings_notifications">Benachrichtigungen</string>
+    <string name="settings_pre_notify">12 Stunden vorher erinnern</string>
+    <string name="settings_pre_notify_hint">In der Benachrichtigung stehen Aufwach- und Aufbruchszeit</string>
+    <string name="settings_appearance">Darstellung</string>
+    <string name="settings_dark_theme">Dunkles Design</string>
+    <string name="settings_dark_theme_hint">Helles oder dunkles Erscheinungsbild</string>
+    <string name="settings_language">Sprache</string>
+    <string name="language_system">System</string>
+    <string name="settings_diagnostics">Diagnose</string>
+    <string name="settings_diagnostics_text">Wenn der Alarm nicht wie erwartet funktioniert hat, senden Sie das Protokoll — darin steht, was auf dem Gerät passiert ist.</string>
+    <string name="settings_send_logs">Protokolle senden</string>
+
+    <string name="permissions_title">Berechtigungen und Warnungen</string>
+    <string name="permission_missing_hint">Nicht erlaubt — der Alarm klingelt möglicherweise nicht</string>
+    <string name="perm_exact">Exakte Alarme</string>
+    <string name="perm_notifications">Benachrichtigungen</string>
+    <string name="perm_battery">Ausnahme von der Akku-Optimierung</string>
+    <string name="perm_fullscreen">Vollbild-Benachrichtigungen</string>
+    <string name="perm_turn_screen">Bildschirm einschalten</string>
+    <string name="perm_ring_channel">Lauter Kanal „Alarmsignal“</string>
+    <string name="perm_volume">Alarmton ist aus — das Signal ist nicht zu hören</string>
+    <string name="perm_dnd_access">Zugriff auf „Nicht stören“</string>
+    <string name="perm_dnd_access_hint">Ohne Zugriff kann die App nicht erkennen, ob der Modus den Alarm stummschaltet</string>
+    <string name="perm_dnd_blocks">„Nicht stören“ kann den Alarm stummschalten</string>
+    <string name="action_configure">Einrichten</string>
+    <string name="action_allow">Erlauben</string>
+    <string name="action_fix">Beheben</string>
+
+    <string name="time_invalid">Stunden 0–23 und Minuten 0–59 eingeben</string>
+
+    <plurals name="until_departure">
+        <item quantity="one">Noch %1$d Minute bis zum Aufbruch</item>
+        <item quantity="other">Noch %1$d Minuten bis zum Aufbruch</item>
+    </plurals>
+    <string name="time_to_leave">Zeit zu gehen</string>
+    <string name="ring_wake_leave">Aufwachen %1$s · Aufbruch %2$s</string>
+    <string name="ring_stop_title">Signale stoppen?</string>
+    <string name="ring_silence">Stille</string>
+    <string name="ring_silence_hint">Musik stoppen, der Alarm bleibt an</string>
+    <string name="ring_silence_hint_late">Stimme bis zur nächsten Minute stoppen</string>
+    <string name="ring_remind">Musik stoppen, aber an den Aufbruch erinnern</string>
+    <string name="ring_remind_hint">Stimme bei 20, 15, 10 und 5 Minuten und beim Aufbruch</string>
+    <string name="ring_remind_hint_late">„Zeit zu gehen“ — danach Stille bis zum nächsten Signal</string>
+    <string name="ring_stop">Signale stoppen</string>
+    <string name="ring_stop_hint">Musik und alle Erinnerungen für heute stoppen</string>
+    <string name="confirm_title">Sind Sie sicher?</string>
+    <string name="confirm_stop_text">Musik und Sprach-Erinnerungen dieses Zyklus werden gestoppt. Der Alarm bleibt eingeschaltet: Er klingelt wieder laut Zeitplan.</string>
+    <string name="confirm_remind_text">Die Musik stoppt, aber die Aufbruch-Erinnerungen bleiben: Sie ertönen bei 20, 15, 10 und 5 Minuten und beim Aufbruch.</string>
+    <string name="confirm_remind_text_late">Die Musik stoppt, aber die Stimme „Zeit zu gehen“ ertönt beim Aufbruch. Danach schaltet sich der Alarm ohne Verspätungs-Erinnerungen aus.</string>
+    <string name="yes_remind">Ja, erinnern</string>
+
+    <string name="channel_status">Alarm gestellt</string>
+    <string name="channel_status_desc">Zeitplan und Verspätungs-Erinnerungen</string>
+    <string name="channel_ringing">Alarmsignal</string>
+    <string name="channel_ringing_desc">Musik und Sprachansagen bis zum Aufbruch</string>
+    <string name="notif_scheduled_title">Alarm gestellt</string>
+    <string name="notif_scheduled_text">Aufwachen um %1$s · Aufbruch um %2$s</string>
+    <string name="notif_active_title">Alarm gestellt</string>
+    <string name="notif_leave_title">Zeit zu gehen</string>
+    <string name="notif_active_text">%1$s\nAufwachen um %2$s · Aufbruch um %3$s</string>
+    <string name="notif_ringing_title">Zeit aufzustehen</string>
+    <string name="notif_snooze">Später</string>
+    <string name="notif_remind">Erinnern</string>
+    <string name="notif_stop">Stoppen</string>
+    <string name="notif_starting_title">Zeit zu gehen</string>
+    <string name="notif_starting_text">Signal wird vorbereitet…</string>
+    <string name="notif_reminders_title">Aufbruch-Erinnerungen</string>
+    <string name="notif_reminders_text">Keine Musik · Aufbruch um %1$s. Stimme bei 20, 15, 10 und 5 Minuten und beim Aufbruch. Danach keine Erinnerungen mehr.</string>
+    <string name="notif_late_title">Sie sind zu spät</string>
+
+    <string name="duration_h">%1$d Std.</string>
+    <string name="duration_m">%1$d Min.</string>
+    <string name="duration_hm">%1$d Std. %2$d Min.</string>
+
+    <string name="when_today">heute, %1$s</string>
+    <string name="when_tomorrow">morgen, %1$s</string>
+    <string name="when_day">%1$s, %2$s</string>
+
+    <string name="logs_empty">Noch keine Protokolle</string>
+    <string name="logs_share_title">Protokolle senden</string>
+    <string name="logs_share_subject">App-Protokolle „Zeit zu gehen“</string>
+    <string name="logs_share_text">Diagnoseprotokolle des Alarms. Das Archiv kann Geräteangaben und Ihren Zeitplan enthalten.</string>
+    <string name="logs_share_failed">Freigabe der Protokolle konnte nicht geöffnet werden</string>
+</resources>

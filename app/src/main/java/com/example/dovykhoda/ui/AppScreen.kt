@@ -44,6 +44,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -51,6 +52,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.dovykhoda.AlarmItem
 import com.example.dovykhoda.AlarmScheduler
+import com.example.dovykhoda.R
 import com.example.dovykhoda.AlarmService
 import com.example.dovykhoda.AlarmSettings
 import com.example.dovykhoda.SchedulePlanner
@@ -71,9 +73,11 @@ fun AppScreen(
     onExportLogs: () -> Unit,
     darkTheme: Boolean = isSystemInDarkTheme(),
     onDarkThemeChange: (Boolean) -> Unit = {},
+    onLanguageChange: (String?) -> Unit = {},
 ) {
     val context = LocalContext.current
     val store = remember { SettingsStore(context) }
+    val languageTag = remember { store.languageTag() }
     var settings by remember { mutableStateOf(store.load()) }
     var alarms by remember { mutableStateOf(store.alarms()) }
     var tab by rememberSaveable { mutableIntStateOf(0) }
@@ -172,7 +176,7 @@ fun AppScreen(
                     selected = tab == 0,
                     onClick = { tab = 0; editingId = null },
                     icon = { Icon(Icons.Filled.Notifications, contentDescription = null) },
-                    label = { Text("Будильники") },
+                    label = { Text(stringResource(R.string.tab_alarms)) },
                     colors = tabColors,
                     modifier = Modifier.testTag("tab_alarms"),
                 )
@@ -180,7 +184,7 @@ fun AppScreen(
                     selected = tab == 1,
                     onClick = { tab = 1; editingId = null },
                     icon = { Icon(Icons.Filled.Settings, contentDescription = null) },
-                    label = { Text("Настройки") },
+                    label = { Text(stringResource(R.string.tab_settings)) },
                     colors = tabColors,
                     modifier = Modifier.testTag("tab_settings"),
                 )
@@ -212,8 +216,10 @@ fun AppScreen(
                     stoppedCycle = store.stoppedCycle(),
                     nowMillis = nowMillis,
                     darkTheme = darkTheme,
+                    languageTag = languageTag,
                     onChange = ::applySettings,
                     onDarkThemeChange = onDarkThemeChange,
+                    onLanguageChange = onLanguageChange,
                     onRequestExactAlarms = onRequestExactAlarms,
                     onRequestNotifications = onRequestNotifications,
                     onRequestBatteryExemption = onRequestBatteryExemption,
@@ -247,13 +253,13 @@ private fun AlarmsTab(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                "Будильники",
+                stringResource(R.string.alarms_title),
                 Modifier.weight(1f).testTag("alarms_title"),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.SemiBold,
             )
             TextButton(onClick = onAdd, modifier = Modifier.testTag("add_alarm")) {
-                Text("Добавить")
+                Text(stringResource(R.string.alarms_add))
             }
         }
         Spacer(Modifier.height(8.dp))
@@ -263,7 +269,7 @@ private fun AlarmsTab(
         }
         if (alarms.isEmpty()) {
             Text(
-                "Пока нет будильников. Нажмите «Добавить», чтобы создать первый.",
+                stringResource(R.string.alarms_empty),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(vertical = 24.dp),
@@ -285,21 +291,16 @@ private fun AlarmsTab(
     if (confirmStop) {
         AlertDialog(
             onDismissRequest = { confirmStop = false },
-            title = { Text("Остановить сигналы?") },
-            text = {
-                Text(
-                    "Сигналы и напоминания этого цикла остановятся. " +
-                        "Будильник останется включённым и зазвонит в следующий раз по расписанию.",
-                )
-            },
+            title = { Text(stringResource(R.string.stop_signals_title)) },
+            text = { Text(stringResource(R.string.stop_signals_text)) },
             confirmButton = {
                 TextButton(onClick = {
                     confirmStop = false
                     AlarmService.stopAlarm(context)
-                }) { Text("Да, остановить") }
+                }) { Text(stringResource(R.string.yes_stop)) }
             },
             dismissButton = {
-                TextButton(onClick = { confirmStop = false }) { Text("Отмена") }
+                TextButton(onClick = { confirmStop = false }) { Text(stringResource(R.string.cancel)) }
             },
         )
     }
@@ -319,16 +320,18 @@ private fun CycleBanner(cycle: SettingsStore.ActiveCycle, onStop: () -> Unit) {
         ) {
             Column(Modifier.weight(1f)) {
                 Text(
-                    if (cycle.remindersOnly) "Идут напоминания о выходе" else "Цикл будильника идёт",
+                    stringResource(
+                        if (cycle.remindersOnly) R.string.banner_reminders else R.string.banner_cycle,
+                    ),
                     style = MaterialTheme.typography.titleSmall,
                 )
                 Text(
-                    "Выход в ${formatClock(cycle.leaveMillis)}",
+                    stringResource(R.string.banner_leave, formatClock(cycle.leaveMillis)),
                     style = MaterialTheme.typography.bodySmall,
                 )
             }
             TextButton(onClick = onStop, modifier = Modifier.testTag("stop_cycle")) {
-                Text("Остановить")
+                Text(stringResource(R.string.banner_stop))
             }
         }
     }
@@ -357,7 +360,7 @@ private fun AlarmCard(
                     else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
                 )
                 Text(
-                    "Выход в ${alarm.leaveLabel} · ${alarm.daysLabel}",
+                    stringResource(R.string.alarm_leave_days, alarm.leaveLabel, daysLabel(alarm.days)),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -365,7 +368,7 @@ private fun AlarmCard(
                     val from = stoppedCycle?.scheduleFrom(alarm.id, nowMillis) ?: nowMillis
                     val next = SchedulePlanner.nextTrigger(from, alarm.toSettings(settings))
                     Text(
-                        "Ближайший сигнал: ${formatWhen(next.atMillis, nowMillis)}",
+                        stringResource(R.string.alarm_next_signal, formatWhen(next.atMillis, nowMillis)),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.primary,
                     )
@@ -394,10 +397,10 @@ private fun AlarmEditor(
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             TextButton(onClick = onBack, modifier = Modifier.testTag("editor_back")) {
-                Text("Назад")
+                Text(stringResource(R.string.back))
             }
             Text(
-                "Будильник",
+                stringResource(R.string.editor_title),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.SemiBold,
             )
@@ -405,17 +408,17 @@ private fun AlarmEditor(
         Spacer(Modifier.height(8.dp))
         ScreenCard {
             ToggleRow(
-                title = "Будильник включён",
-                subtitle = "Пока выключен, сигналы не звучат",
+                title = stringResource(R.string.editor_enabled),
+                subtitle = stringResource(R.string.editor_enabled_hint),
                 checked = alarm.enabled,
                 tag = "editor_enabled",
                 onCheckedChange = { onChange(alarm.copy(enabled = it)) },
             )
         }
         Spacer(Modifier.height(12.dp))
-        ScreenCard("Время") {
+        ScreenCard(stringResource(R.string.editor_time)) {
             TimeTile(
-                label = "Пробуждение",
+                label = stringResource(R.string.editor_wake),
                 value = alarm.wakeLabel,
                 enabled = alarm.enabled && !alarm.departureTimeOnly,
                 tag = "editor_wake_time",
@@ -423,7 +426,7 @@ private fun AlarmEditor(
             )
             Spacer(Modifier.height(10.dp))
             TimeTile(
-                label = "Выход",
+                label = stringResource(R.string.editor_leave),
                 value = alarm.leaveLabel,
                 enabled = alarm.enabled,
                 tag = "editor_leave_time",
@@ -431,8 +434,8 @@ private fun AlarmEditor(
             )
             Spacer(Modifier.height(6.dp))
             ToggleRow(
-                title = "Задавать только время выхода",
-                subtitle = "Пробуждение посчитается от времени на сборы",
+                title = stringResource(R.string.editor_departure_only),
+                subtitle = stringResource(R.string.editor_departure_only_hint),
                 checked = alarm.departureTimeOnly,
                 enabled = alarm.enabled,
                 tag = "editor_departure_only",
@@ -440,9 +443,9 @@ private fun AlarmEditor(
             )
         }
         Spacer(Modifier.height(12.dp))
-        ScreenCard("Время на сборы") {
+        ScreenCard(stringResource(R.string.editor_preparation)) {
             ValueSlider(
-                title = "От пробуждения до выхода",
+                title = stringResource(R.string.editor_preparation_range),
                 valueLabel = formatDuration(alarm.preparationMinutes),
                 value = alarm.preparationMinutes,
                 range = 40..150,
@@ -453,7 +456,7 @@ private fun AlarmEditor(
             )
         }
         Spacer(Modifier.height(12.dp))
-        ScreenCard("Дни недели") {
+        ScreenCard(stringResource(R.string.editor_days)) {
             DaysEditor(alarm, onChange)
         }
         Spacer(Modifier.height(16.dp))
@@ -461,23 +464,25 @@ private fun AlarmEditor(
             onClick = { confirmDelete = true },
             modifier = Modifier.fillMaxWidth().testTag("delete_alarm"),
         ) {
-            Text("Удалить будильник", color = MaterialTheme.colorScheme.error)
+            Text(stringResource(R.string.editor_delete), color = MaterialTheme.colorScheme.error)
         }
         Spacer(Modifier.height(24.dp))
     }
     if (confirmDelete) {
         AlertDialog(
             onDismissRequest = { confirmDelete = false },
-            title = { Text("Удалить будильник?") },
-            text = { Text("Будильник ${alarm.wakeLabel} — выход в ${alarm.leaveLabel} будет удалён насовсем.") },
+            title = { Text(stringResource(R.string.delete_alarm_title)) },
+            text = {
+                Text(stringResource(R.string.delete_alarm_text, alarm.wakeLabel, alarm.leaveLabel))
+            },
             confirmButton = {
                 TextButton(onClick = {
                     confirmDelete = false
                     onDelete()
-                }) { Text("Удалить", color = MaterialTheme.colorScheme.error) }
+                }) { Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error) }
             },
             dismissButton = {
-                TextButton(onClick = { confirmDelete = false }) { Text("Отмена") }
+                TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.cancel)) }
             },
         )
     }
@@ -493,19 +498,19 @@ private fun DaysEditor(alarm: AlarmItem, onChange: (AlarmItem) -> Unit) {
 
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
         SelectChip(
-            text = "Каждый день",
+            text = stringResource(R.string.days_all),
             selected = alarm.days.size == DayOfWeek.entries.size,
             enabled = alarm.enabled,
             tag = "day_preset_all",
         ) { onChange(alarm.withDays(AlarmItem.ALL_DAYS)) }
         SelectChip(
-            text = "Будни",
+            text = stringResource(R.string.days_weekdays),
             selected = alarm.days == AlarmItem.WEEKDAYS,
             enabled = alarm.enabled,
             tag = "day_preset_weekdays",
         ) { onChange(alarm.withDays(AlarmItem.WEEKDAYS)) }
         SelectChip(
-            text = "Выходные",
+            text = stringResource(R.string.days_weekend),
             selected = alarm.days == AlarmItem.WEEKEND,
             enabled = alarm.enabled,
             tag = "day_preset_weekend",
@@ -524,7 +529,7 @@ private fun DaysEditor(alarm: AlarmItem, onChange: (AlarmItem) -> Unit) {
     }
     Spacer(Modifier.height(4.dp))
     Text(
-        "Должен оставаться хотя бы один день.",
+        stringResource(R.string.days_need_one),
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )

@@ -30,10 +30,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.dovykhoda.LocaleHelper
+import com.example.dovykhoda.R
 import com.example.dovykhoda.SpeechText
 import com.example.dovykhoda.ui.theme.AlarmButtonDark
 import com.example.dovykhoda.ui.theme.AlarmButtonMedium
@@ -76,6 +81,8 @@ fun RingingScreen(
     // Кнопка «назад» не должна закрывать окно: выбор нужно сделать осознанно.
     BackHandler(enabled = true) { }
 
+    val context = LocalContext.current
+    val speechLang = remember(context) { LocaleHelper.speechLang(context) }
     var clock by remember { mutableStateOf(LocalTime.now()) }
     LaunchedEffect(Unit) {
         while (true) {
@@ -107,10 +114,11 @@ fun RingingScreen(
             Spacer(Modifier.height(18.dp))
 
             val status = when {
-                lateMinutes > 0 -> SpeechText.late(lateMinutes)
-                remainingMinutes <= 0 -> "Пора выходить"
-                else -> "До выхода $remainingMinutes " +
-                    SpeechText.plural(remainingMinutes, "минута", "минуты", "минут")
+                lateMinutes > 0 -> SpeechText.late(lateMinutes, speechLang)
+                remainingMinutes <= 0 -> stringResource(R.string.time_to_leave)
+                else -> pluralStringResource(
+                    R.plurals.until_departure, remainingMinutes, remainingMinutes,
+                )
             }
             Text(
                 text = status,
@@ -123,7 +131,7 @@ fun RingingScreen(
             Spacer(Modifier.height(8.dp))
 
             Text(
-                text = "Пробуждение $wakeLabel · выход $leaveLabel",
+                text = stringResource(R.string.ring_wake_leave, wakeLabel, leaveLabel),
                 color = SecondaryText,
                 style = MaterialTheme.typography.bodyMedium,
             )
@@ -131,7 +139,7 @@ fun RingingScreen(
             if (lateMinutes > 0) {
                 Spacer(Modifier.height(18.dp))
                 Text(
-                    text = "Остановить сигналы?",
+                    text = stringResource(R.string.ring_stop_title),
                     color = PrimaryText,
                     style = MaterialTheme.typography.titleLarge,
                     textAlign = TextAlign.Center,
@@ -141,9 +149,10 @@ fun RingingScreen(
             Spacer(Modifier.weight(1f))
 
             BigAlarmButton(
-                title = "Тишина",
-                hint = if (lateMinutes > 0) "Остановить голос до следующей минуты"
-                    else "Остановить музыку, будильник останется",
+                title = stringResource(R.string.ring_silence),
+                hint = stringResource(
+                    if (lateMinutes > 0) R.string.ring_silence_hint_late else R.string.ring_silence_hint,
+                ),
                 container = AlarmButtonLight,
                 content = AlarmButtonDark,
                 onClick = onSilence,
@@ -153,9 +162,11 @@ fun RingingScreen(
 
             if (lateMinutes <= 0) {
                 BigAlarmButton(
-                    title = "Остановить музыку, но напомнить о выходе",
-                    hint = if (remainingMinutes > 0) "Голос за 20, 15, 10 и 5 минут и в момент выхода"
-                        else "«Пора выходить» — затем тишина до следующего сигнала",
+                    title = stringResource(R.string.ring_remind),
+                    hint = stringResource(
+                        if (remainingMinutes > 0) R.string.ring_remind_hint
+                        else R.string.ring_remind_hint_late,
+                    ),
                     container = AlarmButtonMedium,
                     content = Color.White,
                     onClick = onRequestRemindDeparture,
@@ -164,8 +175,8 @@ fun RingingScreen(
             }
 
             BigAlarmButton(
-                title = "Остановить сигналы",
-                hint = "Остановить музыку и все напоминания на сегодня",
+                title = stringResource(R.string.ring_stop),
+                hint = stringResource(R.string.ring_stop_hint),
                 container = AlarmButtonDark,
                 content = AlarmButtonLight,
                 onClick = onRequestStop,
@@ -180,27 +191,24 @@ fun RingingScreen(
         val stopEverything = pending == AlarmConfirmation.Stop
         AlertDialog(
             onDismissRequest = onDismissConfirm,
-            title = { Text("Вы уверены?") },
+            title = { Text(stringResource(R.string.confirm_title)) },
             text = {
                 Text(
-                    when {
-                        stopEverything ->
-                            "Музыка и голосовые напоминания этого цикла остановятся. " +
-                                "Будильник останется включённым: следующее срабатывание — " +
-                                "по расписанию."
-                        remainingMinutes > 0 ->
-                            "Музыка остановится, а голосовые напоминания о выходе останутся: " +
-                                "они прозвучат за 20, 15, 10 и 5 минут и в момент выхода."
-                        else ->
-                            "Музыка остановится, но голос «Пора выходить» прозвучит в момент " +
-                                "выхода. После этого будильник выключится без напоминаний об опоздании."
-                    }
+                    stringResource(
+                        when {
+                            stopEverything -> R.string.confirm_stop_text
+                            remainingMinutes > 0 -> R.string.confirm_remind_text
+                            else -> R.string.confirm_remind_text_late
+                        },
+                    )
                 )
             },
             confirmButton = {
                 TextButton(onClick = { onConfirm(pending) }) {
                     Text(
-                        text = if (stopEverything) "Да, остановить" else "Да, напомнить",
+                        text = stringResource(
+                            if (stopEverything) R.string.yes_stop else R.string.yes_remind,
+                        ),
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
                     )
@@ -208,7 +216,7 @@ fun RingingScreen(
             },
             dismissButton = {
                 TextButton(onClick = onDismissConfirm) {
-                    Text("Отмена")
+                    Text(stringResource(R.string.cancel))
                 }
             },
         )

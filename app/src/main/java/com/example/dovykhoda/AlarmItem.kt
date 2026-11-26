@@ -24,15 +24,6 @@ data class AlarmItem(
     /** Будильник реально ставится на ближайший день: включён и есть хотя бы один день. */
     val scheduled: Boolean get() = enabled && days.isNotEmpty()
 
-    val daysLabel: String
-        get() = when {
-            days.isEmpty() -> "Дни не выбраны"
-            days.size == ALL_DAYS.size -> "Каждый день"
-            days == WEEKDAYS -> "По будням"
-            days == WEEKEND -> "По выходным"
-            else -> days.sortedBy { it.value }.joinToString(", ") { DAY_SHORT.getValue(it) }
-        }
-
     val daysMask: Int get() = days.fold(0) { mask, day -> mask or (1 shl (day.value - 1)) }
 
     fun withWakeTime(hour: Int, minute: Int): AlarmItem {
@@ -92,16 +83,6 @@ data class AlarmItem(
         )
         val WEEKEND: Set<DayOfWeek> = setOf(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY)
         val ALL_DAYS: Set<DayOfWeek> = DayOfWeek.entries.toSet()
-
-        private val DAY_SHORT = mapOf(
-            DayOfWeek.MONDAY to "Пн",
-            DayOfWeek.TUESDAY to "Вт",
-            DayOfWeek.WEDNESDAY to "Ср",
-            DayOfWeek.THURSDAY to "Чт",
-            DayOfWeek.FRIDAY to "Пт",
-            DayOfWeek.SATURDAY to "Сб",
-            DayOfWeek.SUNDAY to "Вс",
-        )
 
         fun fromMask(mask: Int): Set<DayOfWeek> {
             val days = DayOfWeek.entries.filter { mask and (1 shl (it.value - 1)) != 0 }.toSet()
