@@ -6,9 +6,12 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.semantics.SemanticsActions
+import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsEnabled
+import androidx.compose.ui.test.assertIsFocused
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsOff
@@ -20,6 +23,7 @@ import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.unit.sp
 import com.example.dovykhoda.ui.AppScreen
@@ -79,6 +83,13 @@ class AlarmScreenTest {
     private fun openEditor() {
         compose.onNodeWithTag("alarm_card_1").performClick()
         compose.onNodeWithTag("editor_enabled").assertIsDisplayed()
+    }
+
+    /** Открывает диалог времени и даёт отработать кадру, на котором поле часов получает фокус. */
+    private fun openTimeDialog(tag: String = "editor_wake_time") {
+        compose.onNodeWithTag(tag).performClick()
+        compose.mainClock.advanceTimeByFrame()
+        compose.waitForIdle()
     }
 
     @Test
@@ -203,9 +214,9 @@ class AlarmScreenTest {
     fun `time is typed with a numeric keyboard instead of a clock dial`() {
         showScreen()
         openEditor()
-        compose.onNodeWithTag("editor_wake_time").performClick()
-        compose.onNodeWithTag("time_hour_input").performTextReplacement("9")
-        compose.onNodeWithTag("time_minute_input").performTextReplacement("45")
+        openTimeDialog()
+        compose.onNodeWithTag("time_hour_input").performTextInput("9")
+        compose.onNodeWithTag("time_minute_input").performTextInput("45")
         compose.onNodeWithTag("time_confirm").performClick()
         compose.runOnIdle {
             assertEquals("09:45", store.alarm(1L)?.wakeLabel)
@@ -217,9 +228,29 @@ class AlarmScreenTest {
     fun `invalid typed time cannot be confirmed`() {
         showScreen()
         openEditor()
-        compose.onNodeWithTag("editor_wake_time").performClick()
-        compose.onNodeWithTag("time_hour_input").performTextReplacement("25")
+        openTimeDialog()
+        compose.onNodeWithTag("time_hour_input").performTextInput("25")
         compose.onNodeWithTag("time_confirm").assertIsNotEnabled()
+    }
+
+    @Test
+    fun `two hour digits move focus to minutes with digits selected`() {
+        showScreen()
+        openEditor()
+        openTimeDialog()
+        compose.onNodeWithTag("time_hour_input").performTextInput("09")
+        compose.mainClock.advanceTimeByFrame()
+        compose.waitForIdle()
+        val hourText = compose.onNodeWithTag("time_hour_input").fetchSemanticsNode()
+            .config[SemanticsProperties.EditableText].text
+        assertEquals("09", hourText)
+        compose.onNodeWithTag("time_minute_input").assertIsFocused()
+        val selection = compose.onNodeWithTag("time_minute_input").fetchSemanticsNode()
+            .config[SemanticsProperties.TextSelectionRange]
+        assertEquals(TextRange(0, 2), selection)
+        compose.onNodeWithTag("time_minute_input").performTextInput("30")
+        compose.onNodeWithTag("time_confirm").performClick()
+        compose.runOnIdle { assertEquals("09:30", store.alarm(1L)?.wakeLabel) }
     }
 
     @Test

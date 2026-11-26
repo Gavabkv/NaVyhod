@@ -22,14 +22,24 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -244,10 +254,29 @@ private fun TimeInputDialog(
     onConfirm: (Int, Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var hourText by remember { mutableStateOf(initialHour.toString().padStart(2, '0')) }
-    var minuteText by remember { mutableStateOf(initialMinute.toString().padStart(2, '0')) }
-    val hour = hourText.toIntOrNull()
-    val minute = minuteText.toIntOrNull()
+    fun startValue(minutes: Int) =
+        TextFieldValue(minutes.toString().padStart(2, '0'), selection = TextRange(0, 2))
+
+    var hourField by remember { mutableStateOf(startValue(initialHour)) }
+    var minuteField by remember { mutableStateOf(startValue(initialMinute)) }
+    val hourFocus = remember { FocusRequester() }
+    val minuteFocus = remember { FocusRequester() }
+    val keyboard = LocalSoftwareKeyboardController.current
+    val scope = rememberCoroutineScope()
+
+    // Фокус сразу на часах, чтобы клавиатура появилась без лишнего нажатия.
+    // Ждём кадр: до первого layout FocusRequester ещё не привязан к полю.
+    LaunchedEffect(Unit) {
+        withFrameNanos { }
+        runCatching { hourFocus.requestFocus() }
+        keyboard?.show()
+    }
+
+    fun selectAll(value: TextFieldValue) =
+        value.copy(selection = TextRange(0, value.text.length))
+
+    val hour = hourField.text.toIntOrNull()
+    val minute = minuteField.text.toIntOrNull()
     val valid = hour != null && hour in 0..23 && minute != null && minute in 0..59
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -259,24 +288,49 @@ private fun TimeInputDialog(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     OutlinedTextField(
-                        value = hourText,
-                        onValueChange = { text -> hourText = text.filter { it.isDigit() }.take(2) },
+                        value = hourField,
+                        onValueChange = { value ->
+                            val text = value.text.filter { it.isDigit() }.take(2)
+                            hourField = TextFieldValue(text, selection = TextRange(text.length))
+                            // После двух цифр часов переходим к минутам с выделением,
+                            // чтобы новые цифры сразу заменяли старые. Фокус переводим
+                            // следующим кадром: иначе поле часов теряет фокус раньше,
+                            // чем успевает применить новое значение, и откатывается назад.
+                            if (text.length == 2) {
+                                minuteField = selectAll(minuteField)
+                                scope.launch {
+                                    withFrameNanos { }
+                                    minuteFocus.requestFocus()
+                                }
+                            }
+                        },
                         label = { Text("Часы") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
-                        modifier = Modifier.weight(1f).testTag("time_hour_input"),
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("time_hour_input")
+                            .focusRequester(hourFocus)
+                            .onFocusChanged { if (it.isFocused) hourField = selectAll(hourField) },
                     )
                     Text(":", style = MaterialTheme.typography.headlineSmall)
                     OutlinedTextField(
-                        value = minuteText,
-                        onValueChange = { text -> minuteText = text.filter { it.isDigit() }.take(2) },
+                        value = minuteField,
+                        onValueChange = { value ->
+                            val text = value.text.filter { it.isDigit() }.take(2)
+                            minuteField = TextFieldValue(text, selection = TextRange(text.length))
+                        },
                         label = { Text("Минуты") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
-                        modifier = Modifier.weight(1f).testTag("time_minute_input"),
+                        modifier = Modifier
+                            .weight(1f)
+                            .testTag("time_minute_input")
+                            .focusRequester(minuteFocus)
+                            .onFocusChanged { if (it.isFocused) minuteField = selectAll(minuteField) },
                     )
                 }
-                if (!valid && (hourText.isNotEmpty() || minuteText.isNotEmpty())) {
+                if (!valid && (hourField.text.isNotEmpty() || minuteField.text.isNotEmpty())) {
                     Text(
                         "Введите часы 0–23 и минуты 0–59",
                         style = MaterialTheme.typography.bodySmall,
