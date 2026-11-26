@@ -14,6 +14,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
@@ -195,6 +196,11 @@ fun SelectChip(
         onClick = onSelect,
         enabled = enabled,
         label = { Text(text, textAlign = TextAlign.Center) },
+        colors = FilterChipDefaults.filterChipColors(
+            // Коричневый акцент темы вместо синеватых цветов по умолчанию.
+            selectedContainerColor = MaterialTheme.colorScheme.primary,
+            selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+        ),
         modifier = Modifier.testTag(tag),
     )
 }
@@ -259,6 +265,10 @@ private fun TimeInputDialog(
 
     var hourField by remember { mutableStateOf(startValue(initialHour)) }
     var minuteField by remember { mutableStateOf(startValue(initialMinute)) }
+    // Выделяем цифры только после того, как поле получило фокус и IME
+    // синхронизировал значение: иначе курсор иногда встаёт в конец текста.
+    var selectHourOnFocus by remember { mutableStateOf(true) }
+    var selectMinuteOnFocus by remember { mutableStateOf(false) }
     val hourFocus = remember { FocusRequester() }
     val minuteFocus = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
@@ -291,13 +301,13 @@ private fun TimeInputDialog(
                         value = hourField,
                         onValueChange = { value ->
                             val text = value.text.filter { it.isDigit() }.take(2)
-                            hourField = TextFieldValue(text, selection = TextRange(text.length))
-                            // После двух цифр часов переходим к минутам с выделением,
-                            // чтобы новые цифры сразу заменяли старые. Фокус переводим
-                            // следующим кадром: иначе поле часов теряет фокус раньше,
+                            hourField = if (text == value.text) value
+                            else TextFieldValue(text, selection = TextRange(text.length))
+                            // После двух цифр часов переходим к минутам. Фокус и выделение
+                            // ставим следующим кадром: иначе поле часов теряет фокус раньше,
                             // чем успевает применить новое значение, и откатывается назад.
                             if (text.length == 2) {
-                                minuteField = selectAll(minuteField)
+                                selectMinuteOnFocus = true
                                 scope.launch {
                                     withFrameNanos { }
                                     minuteFocus.requestFocus()
@@ -311,14 +321,23 @@ private fun TimeInputDialog(
                             .weight(1f)
                             .testTag("time_hour_input")
                             .focusRequester(hourFocus)
-                            .onFocusChanged { if (it.isFocused) hourField = selectAll(hourField) },
+                            .onFocusChanged { state ->
+                                if (state.isFocused && selectHourOnFocus) {
+                                    selectHourOnFocus = false
+                                    scope.launch {
+                                        withFrameNanos { }
+                                        hourField = selectAll(hourField)
+                                    }
+                                }
+                            },
                     )
                     Text(":", style = MaterialTheme.typography.headlineSmall)
                     OutlinedTextField(
                         value = minuteField,
                         onValueChange = { value ->
                             val text = value.text.filter { it.isDigit() }.take(2)
-                            minuteField = TextFieldValue(text, selection = TextRange(text.length))
+                            minuteField = if (text == value.text) value
+                            else TextFieldValue(text, selection = TextRange(text.length))
                         },
                         label = { Text("Минуты") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
@@ -327,7 +346,15 @@ private fun TimeInputDialog(
                             .weight(1f)
                             .testTag("time_minute_input")
                             .focusRequester(minuteFocus)
-                            .onFocusChanged { if (it.isFocused) minuteField = selectAll(minuteField) },
+                            .onFocusChanged { state ->
+                                if (state.isFocused && selectMinuteOnFocus) {
+                                    selectMinuteOnFocus = false
+                                    scope.launch {
+                                        withFrameNanos { }
+                                        minuteField = selectAll(minuteField)
+                                    }
+                                }
+                            },
                     )
                 }
                 if (!valid && (hourField.text.isNotEmpty() || minuteField.text.isNotEmpty())) {

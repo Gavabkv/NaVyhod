@@ -85,11 +85,18 @@ class AlarmScreenTest {
         compose.onNodeWithTag("editor_enabled").assertIsDisplayed()
     }
 
-    /** Открывает диалог времени и даёт отработать кадру, на котором поле часов получает фокус. */
+    /** Прокручивает кадры, чтобы отработали отложенные фокус и выделение. */
+    private fun settleFrames(count: Int) {
+        repeat(count) {
+            compose.mainClock.advanceTimeByFrame()
+            compose.waitForIdle()
+        }
+    }
+
+    /** Открывает диалог времени и даёт отработать фокусу и выделению часов. */
     private fun openTimeDialog(tag: String = "editor_wake_time") {
         compose.onNodeWithTag(tag).performClick()
-        compose.mainClock.advanceTimeByFrame()
-        compose.waitForIdle()
+        settleFrames(2)
     }
 
     @Test
@@ -239,8 +246,7 @@ class AlarmScreenTest {
         openEditor()
         openTimeDialog()
         compose.onNodeWithTag("time_hour_input").performTextInput("09")
-        compose.mainClock.advanceTimeByFrame()
-        compose.waitForIdle()
+        settleFrames(2)
         val hourText = compose.onNodeWithTag("time_hour_input").fetchSemanticsNode()
             .config[SemanticsProperties.EditableText].text
         assertEquals("09", hourText)
