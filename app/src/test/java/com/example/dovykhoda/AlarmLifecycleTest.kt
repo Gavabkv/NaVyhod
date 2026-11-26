@@ -101,7 +101,9 @@ class AlarmLifecycleTest {
         repeat(repeats - 1) {
             shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(3))
         }
-        return tts.spokenTextList.toList()
+        // Движок речи живёт весь сеанс, поэтому список копит все реплики:
+        // возвращаем только последние, относящиеся к текущему напоминанию.
+        return tts.spokenTextList.toList().takeLast(repeats)
     }
 
     @Test
@@ -354,7 +356,9 @@ class AlarmLifecycleTest {
         val lastSpeech = ShadowTextToSpeech.getLastTextToSpeechInstance()
         shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMinutes(12))
         assertTrue(lastSpeech === ShadowTextToSpeech.getLastTextToSpeechInstance())
-        assertEquals(listOf("Пора выходить"), shadowOf(lastSpeech).spokenTextList)
+        // Движок один на весь сеанс, поэтому проверяем последнюю реплику.
+        assertEquals("Пора выходить", shadowOf(lastSpeech).spokenTextList.last())
+        assertEquals(5, shadowOf(lastSpeech).spokenTextList.size)
         assertTrue(shadowOf(context.getSystemService(AlarmManager::class.java)).scheduledAlarms.isEmpty())
     }
 
@@ -483,6 +487,97 @@ class AlarmLifecycleTest {
         assertEquals(List(3) { SpeechText.late(60) }, completeSpeech(repeats = 3))
         val ringJob = AlarmService::class.java.getDeclaredField("ringJob").apply { isAccessible = true }
         assertNull(ringJob.get(alarm))
+    }
+
+    @Test
+    fun `retry signal is ignored once the ordinary alarm was delivered`() {
+        val store = SettingsStore(context)
+        store.save(settings())
+        val now = System.currentTimeMillis()
+        val wake = now - 10 * 60_000L
+        val leave = now + 50 * 60_000L
+        store.setActiveCycle(SettingsStore.ActiveCycle(wake, leave))
+        store.markSignalDelivered(wake)
+        AlarmScheduler.reschedule(context, store.load())
+        val manager = shadowOf(context.getSystemService(AlarmManager::class.java))
+        assertFalse(manager.scheduledAlarms.any {
+            val saved = shadowOf(it.operation).savedIntent
+            saved.action == AlarmScheduler.ACTION_TRIGGER &&
+                saved.getBooleanExtra(AlarmScheduler.EXTRA_TRIGGER_RETRY, false)
+        })
+        val retry = Intent(AlarmScheduler.ACTION_TRIGGER)
+            .putExtra(AlarmScheduler.EXTRA_TRIGGER_AT, now)
+            .putExtra(AlarmScheduler.EXTRA_CYCLE_WAKE, wake)
+            .putExtra(AlarmScheduler.EXTRA_CYCLE_LEAVE, leave)
+            .putExtra(AlarmScheduler.EXTRA_TRIGGER_RETRY, true)
+        AlarmReceiver().onReceive(context, retry)
+        assertNull(shadowOf(RuntimeEnvironment.getApplication()).nextStartedService)
+
+        // Без отметки о доставке тот же повтор обязан разбудить сервис и завести
+        // себе новую страховку.
+        val fresh = SettingsStore(context)
+        fresh.clearActiveCycle()
+        fresh.setActiveCycle(SettingsStore.ActiveCycle(wake, leave))
+        AlarmReceiver().onReceive(context, retry)
+        val started = shadowOf(RuntimeEnvironment.getApplication()).nextStartedService
+        assertEquals(AlarmService.ACTION_TRIGGER, started.action)
+        assertTrue(manager.scheduledAlarms.any {
+            val saved = shadowOf(it.operation).savedIntent
+            saved.action == AlarmScheduler.ACTION_TRIGGER &&
+                saved.getBooleanExtra(AlarmScheduler.EXTRA_TRIGGER_RETRY, false)
+        })
+    }
+
+    @Test
+    fun `new day signal replaces a stuck reminders only cycle`() {
+        val store = SettingsStore(context)
+        store.save(settings())
+        val now = System.currentTimeMillis()
+        val staleLeave = now - 24 * 60 * 60_000L
+        store.setActiveCycle(SettingsStore.ActiveCycle(staleLeave - 90 * 60_000L, staleLeave, true))
+        val wake = now - 60 * 60_000L
+        val leave = now + 30 * 60_000L
+        AlarmReceiver().onReceive(context, Intent(AlarmScheduler.ACTION_TRIGGER)
+            .putExtra(AlarmScheduler.EXTRA_TRIGGER_AT, now - 3_600_000L)
+            .putExtra(AlarmScheduler.EXTRA_CYCLE_WAKE, wake)
+            .putExtra(AlarmScheduler.EXTRA_CYCLE_LEAVE, leave))
+        assertEquals(SettingsStore.ActiveCycle(wake, leave), store.activeCycle())
+        val started = shadowOf(RuntimeEnvironment.getApplication()).nextStartedService
+        assertEquals(AlarmService.ACTION_TRIGGER, started.action)
+        assertEquals(wake, started.getLongExtra(AlarmScheduler.EXTRA_CYCLE_WAKE, 0L))
+    }
+
+    @Test
+    fun `late sequence keeps an exact system backstop for the next minute`() {
+        val store = SettingsStore(context)
+        store.save(settings())
+        val alarm = service()
+        val leave = startDeparture(alarm)
+        val manager = shadowOf(context.getSystemService(AlarmManager::class.java))
+        val backstop = manager.scheduledAlarms.single {
+            shadowOf(it.operation).savedIntent.action == AlarmScheduler.ACTION_LATE
+        }
+        assertEquals(leave + 60_000L, backstop.triggerAtMs)
+        assertEquals(leave, shadowOf(backstop.operation).savedIntent
+            .getLongExtra(AlarmScheduler.EXTRA_CYCLE_LEAVE, 0L))
+    }
+
+    @Test
+    fun `late backstop is rearmed on reschedule but never in the past`() {
+        val store = SettingsStore(context)
+        store.save(settings())
+        val now = System.currentTimeMillis()
+        val leave = now - 90_000L
+        store.setActiveCycle(SettingsStore.ActiveCycle(leave - 3_600_000L, leave))
+        AlarmScheduler.reschedule(context, store.load(), recoverLate = false)
+        val manager = shadowOf(context.getSystemService(AlarmManager::class.java))
+        val backstop = manager.scheduledAlarms.single {
+            shadowOf(it.operation).savedIntent.action == AlarmScheduler.ACTION_LATE
+        }
+        assertTrue(backstop.triggerAtMs > now)
+        assertTrue(manager.scheduledAlarms.any {
+            shadowOf(it.operation).savedIntent.action == AlarmScheduler.ACTION_TRIGGER
+        })
     }
 
     @Test

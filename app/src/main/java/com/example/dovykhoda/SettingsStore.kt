@@ -163,9 +163,18 @@ class SettingsStore(context: Context) {
         val cycle = activeCycle()
         if (cycle != null) AlarmLog.event("active_cycle_cleared")
         val editor = prefs.edit().remove(KEY_ACTIVE_WAKE).remove(KEY_ACTIVE_LEAVE)
-            .remove(KEY_REMINDERS_ONLY)
+            .remove(KEY_REMINDERS_ONLY).remove(KEY_SIGNAL_DELIVERED)
         if (cycle != null) editor.remove(spokenKey(cycle.leaveMillis))
         editor.apply()
+    }
+
+    /** Обычный сигнал уже доставлен сервису: страховочный повтор не должен звонить снова. */
+    fun signalDelivered(wakeMillis: Long): Boolean =
+        wakeMillis > 0L && prefs.getLong(KEY_SIGNAL_DELIVERED, 0L) == wakeMillis
+
+    fun markSignalDelivered(wakeMillis: Long) {
+        if (wakeMillis <= 0L) return
+        prefs.edit().putLong(KEY_SIGNAL_DELIVERED, wakeMillis).apply()
     }
 
     /**
@@ -221,5 +230,6 @@ class SettingsStore(context: Context) {
         const val KEY_ACTIVE_LEAVE = "active_cycle_leave"
         const val KEY_REMINDERS_ONLY = "reminders_only"
         const val KEY_DEPARTURE_SPOKEN = "departure_spoken_"
+        const val KEY_SIGNAL_DELIVERED = "signal_delivered_wake"
     }
 }

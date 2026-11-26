@@ -1,7 +1,11 @@
 package com.example.dovykhoda.ui
 
+import android.app.NotificationManager
+import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.media.AudioManager
+import android.provider.Settings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -118,6 +122,8 @@ fun AlarmScreen(
     var ringChannelAllowed by remember {
         mutableStateOf(StatusNotifier.isRingChannelAvailable(context))
     }
+    var alarmVolumeMuted by remember { mutableStateOf(isAlarmVolumeMuted(context)) }
+    var dndBlocksAlarms by remember { mutableStateOf(isDndBlockingAlarms(context)) }
 
     DisposableEffect(store) {
         val listener = SharedPreferences.OnSharedPreferenceChangeListener { _, _ ->
@@ -141,6 +147,8 @@ fun AlarmScreen(
                 fullScreenIntentAllowed = MainActivity.canUseFullScreenIntent(context)
                 turnScreenOnAllowed = MainActivity.canTurnScreenOn(context)
                 ringChannelAllowed = StatusNotifier.isRingChannelAvailable(context)
+                alarmVolumeMuted = isAlarmVolumeMuted(context)
+                dndBlocksAlarms = isDndBlockingAlarms(context)
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -151,6 +159,8 @@ fun AlarmScreen(
         while (true) {
             delay(20_000)
             nowMillis = System.currentTimeMillis()
+            alarmVolumeMuted = isAlarmVolumeMuted(context)
+            dndBlocksAlarms = isDndBlockingAlarms(context)
         }
     }
 
@@ -361,12 +371,20 @@ fun AlarmScreen(
                 fullScreenIntentAllowed = fullScreenIntentAllowed,
                 turnScreenOnAllowed = turnScreenOnAllowed,
                 ringChannelAllowed = ringChannelAllowed,
+                alarmVolumeMuted = alarmVolumeMuted,
+                dndBlocksAlarms = dndBlocksAlarms,
                 onRequestExactAlarms = onRequestExactAlarms,
                 onRequestNotifications = onRequestNotifications,
                 onRequestBatteryExemption = onRequestBatteryExemption,
                 onRequestFullScreenIntent = onRequestFullScreenIntent,
                 onRequestTurnScreenOn = onRequestTurnScreenOn,
                 onRequestRingChannel = onRequestRingChannel,
+                onFixAlarmVolume = {
+                    openSettings(context, Settings.ACTION_SOUND_SETTINGS)
+                },
+                onFixDndAlarms = {
+                    openSettings(context, Settings.ACTION_ZEN_MODE_PRIORITY_SETTINGS)
+                },
             )
 
             SettingsCard(title = "Диагностика будильника") {
@@ -770,16 +788,21 @@ private fun PermissionsCard(
     fullScreenIntentAllowed: Boolean,
     turnScreenOnAllowed: Boolean,
     ringChannelAllowed: Boolean,
+    alarmVolumeMuted: Boolean,
+    dndBlocksAlarms: Boolean,
     onRequestExactAlarms: () -> Unit,
     onRequestNotifications: () -> Unit,
     onRequestBatteryExemption: () -> Unit,
     onRequestFullScreenIntent: () -> Unit,
     onRequestTurnScreenOn: () -> Unit,
     onRequestRingChannel: () -> Unit,
+    onFixAlarmVolume: () -> Unit,
+    onFixDndAlarms: () -> Unit,
 ) {
     val needNotifications = !notificationsAllowed
     if (exactAlarmsAllowed && !needNotifications && batteryExempt &&
-        fullScreenIntentAllowed && turnScreenOnAllowed && ringChannelAllowed
+        fullScreenIntentAllowed && turnScreenOnAllowed && ringChannelAllowed &&
+        !alarmVolumeMuted && !dndBlocksAlarms
     ) return
 
     Card(
@@ -841,12 +864,33 @@ private fun PermissionsCard(
                     onAction = onRequestRingChannel,
                 )
             }
+            if (alarmVolumeMuted) {
+                PermissionRow(
+                    text = "Громкость будильника на нуле — сигнала не будет слышно",
+                    action = "Настроить",
+                    onAction = onFixAlarmVolume,
+                    tag = "alarm_volume_muted",
+                )
+            }
+            if (dndBlocksAlarms) {
+                PermissionRow(
+                    text = "Режим «Не беспокоить» заглушает будильник",
+                    action = "Настроить",
+                    onAction = onFixDndAlarms,
+                    tag = "dnd_blocks_alarms",
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun PermissionRow(text: String, action: String, onAction: () -> Unit) {
+private fun PermissionRow(
+    text: String,
+    action: String,
+    onAction: () -> Unit,
+    tag: String? = null,
+) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
             text = text,
@@ -855,8 +899,32 @@ private fun PermissionRow(text: String, action: String, onAction: () -> Unit) {
             modifier = Modifier.weight(1f),
         )
         Spacer(Modifier.width(8.dp))
-        TextButton(onClick = onAction) { Text(action) }
+        TextButton(
+            onClick = onAction,
+            modifier = if (tag != null) Modifier.testTag(tag) else Modifier,
+        ) { Text(action) }
     }
+}
+
+private fun openSettings(context: Context, action: String) {
+    runCatching {
+        context.startActivity(Intent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    }
+}
+
+/** Громкость будильника выкручена в ноль: сигнал прозвучит, но его не будет слышно. */
+private fun isAlarmVolumeMuted(context: Context): Boolean {
+    val audio = context.getSystemService(AudioManager::class.java) ?: return false
+    return audio.getStreamVolume(AudioManager.STREAM_ALARM) == 0
+}
+
+/** «Не беспокоить» активен, а будильники в его исключения не входят. */
+private fun isDndBlockingAlarms(context: Context): Boolean {
+    val manager = context.getSystemService(NotificationManager::class.java) ?: return false
+    if (!manager.isNotificationPolicyAccessGranted) return false
+    if (manager.currentInterruptionFilter == NotificationManager.INTERRUPTION_FILTER_ALL) return false
+    return (manager.notificationPolicy.priorityCategories and
+        NotificationManager.Policy.PRIORITY_CATEGORY_ALARMS) == 0
 }
 
 // ------------------------------------------------------------------ диалог времени

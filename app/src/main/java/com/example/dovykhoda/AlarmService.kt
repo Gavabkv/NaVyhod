@@ -134,6 +134,7 @@ class AlarmService : Service() {
         AlarmLog.event("service_destroyed", "ringing" to isRinging)
         scope.cancel()
         releaseAll()
+        shutdownVoice()
         closeRingScreen()
         isRinging = false
         super.onDestroy()
@@ -182,10 +183,11 @@ class AlarmService : Service() {
             resumeReminders()
             return
         }
+        val wakeMillis = intent.getLongExtra(AlarmScheduler.EXTRA_CYCLE_WAKE, 0L)
         if (!test) {
-            store.setActiveCycle(SettingsStore.ActiveCycle(
-                intent.getLongExtra(AlarmScheduler.EXTRA_CYCLE_WAKE, 0L), leaveMillis,
-            ))
+            store.setActiveCycle(SettingsStore.ActiveCycle(wakeMillis, leaveMillis))
+            // Повтор через 30 секунд после доставленного сигнала звонить не должен.
+            store.markSignalDelivered(wakeMillis)
         }
         releaseAll()
         stopForegroundNow()
@@ -206,6 +208,9 @@ class AlarmService : Service() {
         startForegroundNow(StatusNotifier.buildRinging(this, remaining), ringing = true)
         acquireWakeLock()
         requestAudioFocus()
+        // Движок инициализируется, пока звучит музыка: к реплике он уже готов,
+        // иначе первый запуск TTS может сорваться в запасной сигнал.
+        if (speak) voice()
         playMusic()
         startVibration()
         showRingScreen(remaining)
@@ -253,6 +258,7 @@ class AlarmService : Service() {
     private fun finishSession(refresh: Boolean = true) {
         AlarmLog.event("finish_session", "refresh" to refresh, "lateActive" to (lateJob?.isActive == true))
         releaseAll()
+        shutdownVoice()
         isRinging = false
         stopForegroundNow()
         closeRingScreen()
@@ -417,7 +423,10 @@ class AlarmService : Service() {
             releaseAll()
             // Держим foreground-сеанс до последнего напоминания: система с меньшей
             // вероятностью убьёт живой процесс, а сигналы придут уже в него.
+            // Заодно заранее поднимаем движок речи, чтобы первое напоминание
+            // не сорвалось в писк.
             isRinging = false
+            if (store.load().speakEnabled) voice()
             AlarmLog.event("departure_alarms_armed", "leave" to AlarmLog.formatTime(cycle.leaveMillis))
             return
         }
@@ -440,6 +449,11 @@ class AlarmService : Service() {
             var minutes = SchedulePlanner.nextLateMinute(nowMillis(), leaveMillis)
             while (isActive && canContinueReminders(cycle)) {
                 val due = leaveMillis + minutes * 60_000L
+                // Будильник на ближайшую минуту в системе: если процесс убьют
+                // между репликами, сервис перезапустится и продолжит опоздание.
+                if (due - nowMillis() >= 5_000L) {
+                    AlarmScheduler.armLateBackstop(this@AlarmService, cycle, due)
+                }
                 delay((due - nowMillis()).coerceAtLeast(0L))
                 if (!canContinueReminders(cycle)) break
                 acquireWakeLock()
@@ -688,13 +702,19 @@ class AlarmService : Service() {
     private fun releaseAudio() {
         speechJob?.cancel()
         speechJob = null
-        speaker?.shutdown()
-        speaker = null
         releasePlayer()
         abandonAudioFocus()
         runCatching { vibrator?.cancel() }
         vibrator = null
         musicDucked = false
+    }
+
+    /** Движок TTS закрываем только вместе с сеансом: повторный запуск занимает секунды. */
+    private fun shutdownVoice() {
+        speechJob?.cancel()
+        speechJob = null
+        speaker?.shutdown()
+        speaker = null
     }
 
     private fun releaseAll() {

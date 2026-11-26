@@ -681,4 +681,18 @@ class AlarmScreenTest {
         showScreen()
         compose.onNodeWithText("Отключить будильник").assertDoesNotExist()
     }
+
+    @Test
+    fun `muted alarm volume is reported under permissions with a settings shortcut`() {
+        val audio = context.getSystemService(android.media.AudioManager::class.java)
+        audio.setStreamVolume(android.media.AudioManager.STREAM_ALARM, 0, 0)
+        showScreen()
+        compose.onNodeWithText("Громкость будильника на нуле — сигнала не будет слышно")
+            .performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("alarm_volume_muted").performScrollTo().performClick()
+        compose.runOnIdle {
+            assertEquals(android.provider.Settings.ACTION_SOUND_SETTINGS,
+                shadowOf(RuntimeEnvironment.getApplication()).nextStartedActivity.action)
+        }
+    }
 }

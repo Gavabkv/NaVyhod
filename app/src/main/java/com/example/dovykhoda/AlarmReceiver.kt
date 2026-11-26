@@ -33,9 +33,12 @@ class AlarmReceiver : BroadcastReceiver() {
         val leaveMillis = intent.getLongExtra(AlarmScheduler.EXTRA_CYCLE_LEAVE, 0L)
         val active = store.activeCycle()
         val lateMs = if (atMillis > 0L) now - atMillis else null
-        val reminders = active != null && (active.remindersOnly ||
+        // Новый цикл (следующий день) главнее вчерашнего: иначе застрявший
+        // «опоздание»-цикл глушил бы свежий сигнал.
+        val newerCycle = active != null &&
+            wakeMillis > active.wakeMillis && leaveMillis > active.leaveMillis
+        val reminders = active != null && !newerCycle && (active.remindersOnly ||
             (now >= active.leaveMillis && active.leaveMillis != leaveMillis))
-        AlarmLog.deviceInfo("alarm_trigger_device_state")
         AlarmLog.event(
             "alarm_trigger",
             "action" to intent.action,
@@ -56,6 +59,13 @@ class AlarmReceiver : BroadcastReceiver() {
         }
         if (atMillis == 0L || wakeMillis == 0L || leaveMillis == 0L) {
             AlarmLog.event("alarm_ignored", "reason" to "bad_extras")
+            return
+        }
+        if (intent.getBooleanExtra(AlarmScheduler.EXTRA_TRIGGER_RETRY, false) &&
+            store.signalDelivered(wakeMillis)
+        ) {
+            // Страховочный повтор после уже прозвучавшего сигнала.
+            AlarmLog.event("alarm_retry_deduped", "wake" to AlarmLog.formatTime(wakeMillis))
             return
         }
 
@@ -87,6 +97,9 @@ class AlarmReceiver : BroadcastReceiver() {
             Log.e(TAG, "cannot start alarm service", it)
             AlarmLog.failure("service_start_failed", it, "action" to intent.action)
         }
+        // Снимок состояния устройства стоит дорого; будильник важнее, поэтому
+        // пишем его только после запуска сервиса.
+        AlarmLog.deviceInfo("alarm_trigger_device_state")
     }
 
     private fun handleDepartureReminder(app: Context, intent: Intent) {
