@@ -42,6 +42,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -171,7 +172,13 @@ fun AppScreen(
                 selectedTextColor = MaterialTheme.colorScheme.primary,
                 indicatorColor = MaterialTheme.colorScheme.primary,
             )
-            NavigationBar {
+            NavigationBar(
+                containerColor = if (darkTheme) {
+                    MaterialTheme.colorScheme.surfaceContainer
+                } else {
+                    Color.White
+                },
+            ) {
                 NavigationBarItem(
                     selected = tab == 0,
                     onClick = { tab = 0; editingId = null },
