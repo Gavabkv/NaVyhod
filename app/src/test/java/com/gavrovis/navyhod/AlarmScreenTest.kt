@@ -1,7 +1,9 @@
 package com.gavrovis.navyhod
 
+import android.content.ComponentName
 import android.content.Context
 import android.os.UserManager
+import androidx.activity.ComponentActivity
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
@@ -34,7 +36,9 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TestRule
 import org.junit.runner.RunWith
+import org.junit.runners.model.Statement
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.Shadows.shadowOf
@@ -44,7 +48,22 @@ import java.time.DayOfWeek
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [34], qualifiers = "ru")
 class AlarmScreenTest {
-    @get:Rule
+    // ui-test-manifest объявляется только в debug, поэтому регистрируем хост-активность
+    // вручную, чтобы тот же набор тестов проходил и на release-варианте.
+    @get:Rule(order = 0)
+    val composeHostActivity = TestRule { base, _ ->
+        object : Statement() {
+            override fun evaluate() {
+                val app = RuntimeEnvironment.getApplication()
+                shadowOf(app.packageManager).addActivityIfNotPresent(
+                    ComponentName(app.packageName, ComponentActivity::class.java.name),
+                )
+                base.evaluate()
+            }
+        }
+    }
+
+    @get:Rule(order = 1)
     val compose = createComposeRule()
 
     private val context: Context get() = RuntimeEnvironment.getApplication()
