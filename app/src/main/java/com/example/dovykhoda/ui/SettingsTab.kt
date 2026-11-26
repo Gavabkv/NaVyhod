@@ -41,6 +41,7 @@ fun SettingsTab(
     settings: AlarmSettings,
     alarms: List<AlarmItem>,
     activeCycle: SettingsStore.ActiveCycle?,
+    stoppedCycle: SettingsStore.StoppedCycle?,
     nowMillis: Long,
     onChange: (AlarmSettings) -> Unit,
     onRequestExactAlarms: () -> Unit,
@@ -49,6 +50,7 @@ fun SettingsTab(
     onRequestFullScreenIntent: () -> Unit,
     onRequestTurnScreenOn: () -> Unit,
     onRequestRingChannel: () -> Unit,
+    onRequestDndAccess: () -> Unit,
     onExportLogs: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -61,6 +63,10 @@ fun SettingsTab(
     val turnScreenAllowed = remember(nowMillis) { MainActivity.canTurnScreenOn(context) }
     val ringChannelAllowed = remember(nowMillis) { StatusNotifier.isRingChannelAvailable(context) }
     val volumeMuted = remember(nowMillis) { alarmVolumeMuted(context) }
+    val dndAccess = remember(nowMillis) {
+        context.getSystemService(NotificationManager::class.java)
+            ?.isNotificationPolicyAccessGranted == true
+    }
     val dndBlocks = remember(nowMillis) { dndBlocksAlarms(context) }
 
     Column(
@@ -76,7 +82,7 @@ fun SettingsTab(
         Spacer(Modifier.height(12.dp))
 
         ScreenCard("Ближайший сигнал") {
-            NextSignalInfo(alarms, settings, activeCycle, nowMillis)
+            NextSignalInfo(alarms, settings, activeCycle, stoppedCycle, nowMillis)
         }
         Spacer(Modifier.height(12.dp))
 
@@ -201,6 +207,15 @@ fun SettingsTab(
                     { openSettings(context, Settings.ACTION_SOUND_SETTINGS) },
                 ),
             )
+            if (!dndAccess) add(
+                PermissionIssue(
+                    "Доступ к режиму «Не беспокоить»",
+                    "perm_dnd_access",
+                    "Разрешить",
+                    onRequestDndAccess,
+                    "Без доступа приложение не узнает, глушит ли режим будильник",
+                ),
+            )
             if (dndBlocks) add(
                 PermissionIssue(
                     "Режим «Не беспокоить» может заглушать будильник",
@@ -218,6 +233,7 @@ fun SettingsTab(
                         text = issue.text,
                         tag = issue.tag,
                         action = issue.action,
+                        subtitle = issue.subtitle,
                         onAction = issue.onAction,
                     )
                 }
@@ -246,6 +262,7 @@ private fun NextSignalInfo(
     alarms: List<AlarmItem>,
     settings: AlarmSettings,
     activeCycle: SettingsStore.ActiveCycle?,
+    stoppedCycle: SettingsStore.StoppedCycle?,
     nowMillis: Long,
 ) {
     if (activeCycle != null) {
@@ -260,7 +277,10 @@ private fun NextSignalInfo(
         )
         Spacer(Modifier.height(6.dp))
     }
-    val next = SchedulePlanner.nextAlarmTrigger(nowMillis, alarms, settings)
+    val next = alarms.filter { it.scheduled }.mapNotNull { alarm ->
+        val from = stoppedCycle?.scheduleFrom(alarm.id, nowMillis) ?: nowMillis
+        alarm to SchedulePlanner.nextTrigger(from, alarm.toSettings(settings))
+    }.minByOrNull { it.second.atMillis }
     if (next == null) {
         Text(
             "Нет включённых будильников.",
@@ -289,6 +309,7 @@ private fun PermissionRow(
     text: String,
     tag: String,
     action: String,
+    subtitle: String = "Не разрешено — будильник может не сработать",
     onAction: () -> Unit,
 ) {
     Row(
@@ -302,7 +323,7 @@ private fun PermissionRow(
                 color = MaterialTheme.colorScheme.error,
             )
             Text(
-                "Не разрешено — будильник может не сработать",
+                subtitle,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.error,
             )
@@ -318,6 +339,7 @@ private data class PermissionIssue(
     val tag: String,
     val action: String,
     val onAction: () -> Unit,
+    val subtitle: String = "Не разрешено — будильник может не сработать",
 )
 
 private fun openSettings(context: Context, action: String) {

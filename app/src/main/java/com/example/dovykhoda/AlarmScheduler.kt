@@ -21,9 +21,9 @@ object AlarmScheduler {
     const val EXTRA_ALARM_ID = "extra_alarm_id"
 
     private const val RC_TRIGGER_BASE = 1_000
+    private const val RC_TRIGGER_RETRY_BASE = 1_000_000
     private const val RC_SHOW_APP = 43
     private const val RC_PRE_NOTIFY = 44
-    private const val RC_TRIGGER_RETRY = 45
     private const val RC_LATE = 100
     private const val RC_DEPARTURE_REMINDER_BASE = 110
     private const val RC_DEPARTURE_RETRY_BASE = 120
@@ -53,6 +53,11 @@ object AlarmScheduler {
         }
 
         val store = SettingsStore(context)
+        // Остановленный вручную цикл перестаёт влиять на расписание, когда его
+        // время выхода прошло: дальше работает обычное заведение на следующий день.
+        store.stoppedCycle()?.let { stopped ->
+            if (fromMillis > stopped.leaveMillis + 5_000L) store.clearStoppedCycle()
+        }
         val alarms = store.alarms().filter { it.scheduled }
         var active = store.activeCycle()
         if (active != null && active.alarmId > 0L && store.alarm(active.alarmId)?.scheduled != true) {
@@ -81,12 +86,13 @@ object AlarmScheduler {
         if (active?.remindersOnly == true &&
             fromMillis > active.leaveMillis + 5_000L
         ) {
+            // Напоминания отработали: это завершение сегодняшнего цикла,
+            // а не повод выключать будильник насовсем.
             AlarmLog.event("reminders_expired", "leave" to AlarmLog.formatTime(active.leaveMillis))
-            store.setAlarmEnabled(active.alarmId, false)
             store.clearActiveCycle()
             AlarmService.disable(context)
             StatusNotifier.cancel(context)
-            return
+            active = null
         }
         if (active?.remindersOnly == true) {
             val windowStart = active.leaveMillis - 20 * 60_000L
@@ -120,47 +126,49 @@ object AlarmScheduler {
             }
             // Опоздание живёт в текущем цикле: следующий день всё равно должен
             // быть заведён, иначе после долгого опоздания будильник пропадёт.
-            scheduleTriggers(context, alarms, settings, fromMillis)
-            schedulePreNotifyForNext(context, alarms, settings, fromMillis)
+            scheduleTriggers(context, store, alarms, settings, fromMillis)
+            schedulePreNotifyForNext(context, store, alarms, settings, fromMillis)
             return
         }
-        if (active != null && !active.remindersOnly &&
-            fromMillis < active.leaveMillis && fromMillis - active.wakeMillis in 0L..30 * 60_000L &&
-            !store.signalDelivered(active.wakeMillis)
-        ) {
-            // Страховка на случай убийства процесса сразу после сигнала:
-            // повторный будильник через 30 секунд. Уже доставленный сигнал
-            // отсекает журнал в приёмнике.
-            val at = fromMillis + TRIGGER_RETRY_DELAY_MS
-            AlarmLog.event("alarm_set_retry", "at" to AlarmLog.formatTime(at),
-                "wake" to AlarmLog.formatTime(active.wakeMillis))
-            scheduleAt(context,
-                SchedulePlanner.ScheduledTrigger(at, active.wakeMillis, active.leaveMillis, active.alarmId),
-                ACTION_TRIGGER, retry = true)
-        }
-        scheduleTriggers(context, alarms, settings, fromMillis)
-        schedulePreNotifyForNext(context, alarms, settings, fromMillis)
+        scheduleTriggers(context, store, alarms, settings, fromMillis)
+        schedulePreNotifyForNext(context, store, alarms, settings, fromMillis)
     }
 
     private fun scheduleTriggers(
         context: Context,
+        store: SettingsStore,
         alarms: List<AlarmItem>,
         settings: AlarmSettings,
         fromMillis: Long,
     ) {
         alarms.forEach { alarm ->
-            val next = SchedulePlanner.nextTrigger(fromMillis, alarm.toSettings(settings))
-            scheduleAt(context, next.copy(alarmId = alarm.id))
+            val from = store.scheduleFromMillis(alarm.id, fromMillis)
+            val next = SchedulePlanner.nextTrigger(from, alarm.toSettings(settings))
+                .copy(alarmId = alarm.id)
+            scheduleAt(context, next)
+            // Страховка на каждый сигнал: если процесс убьют ровно в момент
+            // срабатывания, через 30 секунд придёт повтор. В повторе остаётся
+            // время исходного сигнала: по нему приёмник отсекает уже доставленный.
+            scheduleAt(
+                context,
+                next.copy(atMillis = next.atMillis + TRIGGER_RETRY_DELAY_MS),
+                retry = true,
+                deliverAtMillis = next.atMillis,
+            )
         }
     }
 
     private fun schedulePreNotifyForNext(
         context: Context,
+        store: SettingsStore,
         alarms: List<AlarmItem>,
         settings: AlarmSettings,
         fromMillis: Long,
     ) {
-        val next = SchedulePlanner.nextAlarmWake(fromMillis, alarms, settings) ?: return
+        val next = alarms.mapNotNull { alarm ->
+            val from = store.scheduleFromMillis(alarm.id, fromMillis)
+            alarm to SchedulePlanner.nextWakeMillis(from, alarm.toSettings(settings))
+        }.minByOrNull { it.second } ?: return
         schedulePreNotifyAt(context, next.first.toSettings(settings), next.second, next.first.id)
     }
 
@@ -263,9 +271,11 @@ object AlarmScheduler {
         trigger: SchedulePlanner.ScheduledTrigger,
         action: String = ACTION_TRIGGER,
         retry: Boolean = false,
+        deliverAtMillis: Long = trigger.atMillis,
     ) {
         val manager = context.getSystemService(AlarmManager::class.java)
-        val operation = triggerIntent(context, action, trigger, retry)
+        val operation = triggerIntent(context, action, trigger, retry,
+            alarmId = trigger.alarmId, deliverAtMillis = deliverAtMillis)
         try {
             if (canScheduleExact(context)) {
                 val showIntent = PendingIntent.getActivity(
@@ -312,9 +322,11 @@ object AlarmScheduler {
 
     fun cancelAll(context: Context) {
         val manager = context.getSystemService(AlarmManager::class.java)
+        // Старые сборки ставили все сигналы под одним request code 1000.
         manager.cancel(triggerIntent(context, ACTION_TRIGGER))
         SettingsStore(context).alarms().forEach { alarm ->
             manager.cancel(triggerIntent(context, ACTION_TRIGGER, alarmId = alarm.id))
+            manager.cancel(triggerIntent(context, ACTION_TRIGGER, retry = true, alarmId = alarm.id))
         }
         manager.cancel(triggerIntent(context, ACTION_TRIGGER, retry = true))
         manager.cancel(triggerIntent(context, ACTION_LATE))
@@ -322,10 +334,11 @@ object AlarmScheduler {
         cancelDepartureReminders(context)
     }
 
-    /** Снять запланированный сигнал удалённого будильника. */
+    /** Снять запланированные сигналы удалённого будильника. */
     fun cancelAlarm(context: Context, alarmId: Long) {
-        context.getSystemService(AlarmManager::class.java)
-            .cancel(triggerIntent(context, ACTION_TRIGGER, alarmId = alarmId))
+        val manager = context.getSystemService(AlarmManager::class.java)
+        manager.cancel(triggerIntent(context, ACTION_TRIGGER, alarmId = alarmId))
+        manager.cancel(triggerIntent(context, ACTION_TRIGGER, retry = true, alarmId = alarmId))
     }
 
     private fun triggerIntent(
@@ -334,21 +347,26 @@ object AlarmScheduler {
         trigger: SchedulePlanner.ScheduledTrigger? = null,
         retry: Boolean = false,
         alarmId: Long = 0L,
+        deliverAtMillis: Long? = null,
     ): PendingIntent {
         val intent = Intent(context, AlarmReceiver::class.java).setAction(action)
         if (trigger != null) {
-            intent.putExtra(EXTRA_TRIGGER_AT, trigger.atMillis)
+            intent.putExtra(EXTRA_TRIGGER_AT, deliverAtMillis ?: trigger.atMillis)
                 .putExtra(EXTRA_CYCLE_WAKE, trigger.cycleWakeMillis)
                 .putExtra(EXTRA_CYCLE_LEAVE, trigger.cycleLeaveMillis)
                 .putExtra(EXTRA_ALARM_ID, trigger.alarmId)
         }
         if (retry) intent.putExtra(EXTRA_TRIGGER_RETRY, true)
+        // PendingIntent опознаётся по request code, а не по extras: у каждого
+        // будильника (и его повтора) должен быть свой код, иначе сигналы
+        // перезаписывают друг друга и остаётся только последний.
+        val id = (alarmId % 900_000L).toInt()
         return PendingIntent.getBroadcast(
             context,
             when {
                 action == ACTION_LATE -> RC_LATE
-                retry -> RC_TRIGGER_RETRY
-                else -> RC_TRIGGER_BASE + (alarmId % 900_000L).toInt()
+                retry -> RC_TRIGGER_RETRY_BASE + id
+                else -> RC_TRIGGER_BASE + id
             },
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,

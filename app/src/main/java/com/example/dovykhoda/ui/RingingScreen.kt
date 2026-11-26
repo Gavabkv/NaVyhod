@@ -48,7 +48,7 @@ private val LateAccent = Color(0xFFFFB74D)
 
 /** Действие, которое ждёт обязательного подтверждения «Вы уверены?». */
 enum class AlarmConfirmation {
-    /** Полностью выключить будильник: музыка, напоминания и расписание. */
+    /** Остановить сигналы и напоминания этого цикла; будильник остаётся включённым. */
     Stop,
 
     /** Выключить музыку, но оставить голосовые напоминания о выходе. */
@@ -58,7 +58,7 @@ enum class AlarmConfirmation {
 /**
  * Полноэкранное окно сигнала: крупные кнопки разных цветов,
  * чтобы попасть спящему пользователю, и обязательное подтверждение
- * для «Выключить будильник, но напомнить о выходе» и «Отключить будильник».
+ * для «Остановить музыку, но напомнить о выходе» и «Остановить сигналы».
  */
 @Composable
 fun RingingScreen(
@@ -131,7 +131,7 @@ fun RingingScreen(
             if (lateMinutes > 0) {
                 Spacer(Modifier.height(18.dp))
                 Text(
-                    text = "Отключить будильник?",
+                    text = "Остановить сигналы?",
                     color = PrimaryText,
                     style = MaterialTheme.typography.titleLarge,
                     textAlign = TextAlign.Center,
@@ -153,9 +153,9 @@ fun RingingScreen(
 
             if (lateMinutes <= 0) {
                 BigAlarmButton(
-                    title = "Выключить будильник, но напомнить о выходе",
+                    title = "Остановить музыку, но напомнить о выходе",
                     hint = if (remainingMinutes > 0) "Голос за 20, 15, 10 и 5 минут и в момент выхода"
-                        else "«Пора выходить» — затем отключение без опозданий",
+                        else "«Пора выходить» — затем тишина до следующего сигнала",
                     container = AlarmButtonMedium,
                     content = Color.White,
                     onClick = onRequestRemindDeparture,
@@ -164,8 +164,8 @@ fun RingingScreen(
             }
 
             BigAlarmButton(
-                title = "Отключить будильник",
-                hint = "Остановить музыку и все напоминания",
+                title = "Остановить сигналы",
+                hint = "Остановить музыку и все напоминания на сегодня",
                 container = AlarmButtonDark,
                 content = AlarmButtonLight,
                 onClick = onRequestStop,
@@ -185,9 +185,9 @@ fun RingingScreen(
                 Text(
                     when {
                         stopEverything ->
-                            "Музыка, голосовые напоминания и этот будильник будут отключены. " +
-                                "Остальные будильники продолжат работать; включить этот снова " +
-                                "можно в приложении."
+                            "Музыка и голосовые напоминания этого цикла остановятся. " +
+                                "Будильник останется включённым: следующее срабатывание — " +
+                                "по расписанию."
                         remainingMinutes > 0 ->
                             "Музыка остановится, а голосовые напоминания о выходе останутся: " +
                                 "они прозвучат за 20, 15, 10 и 5 минут и в момент выхода."
@@ -200,7 +200,7 @@ fun RingingScreen(
             confirmButton = {
                 TextButton(onClick = { onConfirm(pending) }) {
                     Text(
-                        text = if (stopEverything) "Да, отключить" else "Да, напомнить",
+                        text = if (stopEverything) "Да, остановить" else "Да, напомнить",
                         color = MaterialTheme.colorScheme.primary,
                         fontWeight = FontWeight.Bold,
                     )

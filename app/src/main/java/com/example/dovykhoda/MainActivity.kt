@@ -42,6 +42,7 @@ class MainActivity : ComponentActivity() {
                     onRequestFullScreenIntent = ::openFullScreenIntentSettings,
                     onRequestTurnScreenOn = ::openTurnScreenOnSettings,
                     onRequestRingChannel = ::openRingChannelSettings,
+                    onRequestDndAccess = ::openDndAccessSettings,
                     onExportLogs = ::shareLogs,
                 )
             }
@@ -129,6 +130,17 @@ class MainActivity : ComponentActivity() {
     private fun openRingChannelSettings() {
         val intent = StatusNotifier.ringChannelSettingsIntent(this)
         runCatching { startActivity(intent) }
+            .onFailure {
+                runCatching {
+                    startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+                        .putExtra(Settings.EXTRA_APP_PACKAGE, packageName))
+                }
+            }
+    }
+
+    /** Без доступа к политике уведомлений приложение не видит «Не беспокоить». */
+    private fun openDndAccessSettings() {
+        runCatching { startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)) }
             .onFailure {
                 runCatching {
                     startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)

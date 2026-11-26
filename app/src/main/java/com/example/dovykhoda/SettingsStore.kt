@@ -13,7 +13,30 @@ class SettingsStore(context: Context) {
         val leaveMillis: Long,
         val remindersOnly: Boolean = false,
         val alarmId: Long = 0L,
-    )
+    ) {
+        /**
+         * Сигнал принадлежит этому циклу. Чужие сигналы (другой будильник
+         * или другое время выхода) нельзя глушить режимом «напомнить».
+         */
+        fun matches(wakeMillis: Long, leaveMillis: Long, alarmId: Long): Boolean {
+            if (this.leaveMillis != leaveMillis) return false
+            return if (this.alarmId > 0L && alarmId > 0L) this.alarmId == alarmId
+            else this.wakeMillis == wakeMillis
+        }
+    }
+
+    /**
+     * Цикл, сигналы которого пользователь остановил вручную.
+     * Сам будильник остаётся включённым: сегодняшние сигналы уже не нужны,
+     * а следующий день должен быть заведён как обычно.
+     */
+    data class StoppedCycle(val alarmId: Long, val leaveMillis: Long) {
+        fun appliesTo(id: Long): Boolean = alarmId == 0L || alarmId == id
+
+        /** Расписание строится не раньше конца остановленного цикла. */
+        fun scheduleFrom(id: Long, fromMillis: Long): Long =
+            if (appliesTo(id)) maxOf(fromMillis, leaveMillis) else fromMillis
+    }
 
     private val prefs: SharedPreferences
 
@@ -78,6 +101,7 @@ class SettingsStore(context: Context) {
         val alarms = alarms()
         if (previous.enabled != settings.enabled) {
             clearActiveCycle()
+            clearStoppedCycle()
             // Старый «общий выключатель»: смена флага адресуется всем будильникам.
             if (alarms.isNotEmpty()) {
                 persistAlarms(alarms.map { it.copy(enabled = settings.enabled) })
@@ -103,6 +127,7 @@ class SettingsStore(context: Context) {
         if (previous.wakeHour != settings.wakeHour || previous.wakeMinute != settings.wakeMinute ||
             previous.leaveHour != settings.leaveHour || previous.leaveMinute != settings.leaveMinute
         ) {
+            clearStoppedCycle()
             activeCycle()?.takeIf { it.leaveMillis > System.currentTimeMillis() }?.let { cycle ->
                 val date = java.time.Instant.ofEpochMilli(
                     if (settings.departureTimeOnly) cycle.leaveMillis else cycle.wakeMillis,
@@ -206,12 +231,51 @@ class SettingsStore(context: Context) {
     fun addAlarm(alarm: AlarmItem) = saveAlarms(alarms() + alarm)
 
     fun updateAlarm(alarm: AlarmItem) {
+        val previous = alarm(alarm.id)
         val updated = alarms().map { if (it.id == alarm.id) alarm else it }
         saveAlarms(updated)
+        if (previous == null) return
+        val timesChanged = previous.wakeHour != alarm.wakeHour ||
+            previous.wakeMinute != alarm.wakeMinute ||
+            previous.leaveHour != alarm.leaveHour ||
+            previous.leaveMinute != alarm.leaveMinute ||
+            previous.preparationMinutes != alarm.preparationMinutes ||
+            previous.departureTimeOnly != alarm.departureTimeOnly ||
+            previous.enabled != alarm.enabled
+        if (!timesChanged) return
+        stoppedCycle()?.takeIf { it.appliesTo(alarm.id) }?.let { clearStoppedCycle() }
+        rollActiveCycle(alarm)
+    }
+
+    /**
+     * Идущий цикл должен переехать вместе со своим будильником: иначе сервис
+     * продолжит жить по старым временам, а редактор уже покажет новые.
+     */
+    private fun rollActiveCycle(alarm: AlarmItem) {
+        val cycle = activeCycle() ?: return
+        if (cycle.alarmId != alarm.id || !alarm.scheduled) return
+        val settings = alarm.toSettings(load())
+        val date = java.time.Instant.ofEpochMilli(
+            if (settings.departureTimeOnly) cycle.leaveMillis else cycle.wakeMillis,
+        ).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
+        val wake = if (settings.departureTimeOnly) {
+            date.atTime(SchedulePlanner.leaveTime(settings))
+                .minusMinutes(settings.preparationMinutes.toLong())
+        } else date.atTime(SchedulePlanner.wakeTime(settings))
+        val wakeMillis = SchedulePlanner.toMillis(wake)
+        val leaveMillis = SchedulePlanner.toMillis(SchedulePlanner.leaveFor(wake, settings))
+        if (wakeMillis == cycle.wakeMillis && leaveMillis == cycle.leaveMillis) return
+        setActiveCycle(cycle.copy(wakeMillis = wakeMillis, leaveMillis = leaveMillis))
+        AlarmLog.event(
+            "active_cycle_moved",
+            "wake" to AlarmLog.formatTime(wakeMillis),
+            "leave" to AlarmLog.formatTime(leaveMillis),
+        )
     }
 
     fun deleteAlarm(id: Long) {
         saveAlarms(alarms().filterNot { it.id == id })
+        stoppedCycle()?.takeIf { it.appliesTo(id) }?.let { clearStoppedCycle() }
     }
 
     /** Отключение одного будильника; id=0 — старый одиночный режим без списка. */
@@ -305,13 +369,40 @@ class SettingsStore(context: Context) {
         editor.apply()
     }
 
-    /** Обычный сигнал уже доставлен сервису: страховочный повтор не должен звонить снова. */
-    fun signalDelivered(wakeMillis: Long): Boolean =
-        wakeMillis > 0L && prefs.getLong(KEY_SIGNAL_DELIVERED, 0L) == wakeMillis
+    fun stoppedCycle(): StoppedCycle? {
+        val leave = prefs.getLong(KEY_STOPPED_LEAVE, 0L)
+        if (leave == 0L) return null
+        return StoppedCycle(prefs.getLong(KEY_STOPPED_ALARM_ID, 0L), leave)
+    }
 
-    fun markSignalDelivered(wakeMillis: Long) {
-        if (wakeMillis <= 0L) return
-        prefs.edit().putLong(KEY_SIGNAL_DELIVERED, wakeMillis).apply()
+    /** Запомнить остановленный вручную цикл, не выключая сам будильник. */
+    fun markCycleStopped(cycle: ActiveCycle) {
+        prefs.edit()
+            .putLong(KEY_STOPPED_LEAVE, cycle.leaveMillis)
+            .putLong(KEY_STOPPED_ALARM_ID, cycle.alarmId)
+            .apply()
+        AlarmLog.event(
+            "cycle_stopped",
+            "leave" to AlarmLog.formatTime(cycle.leaveMillis),
+            "alarmId" to cycle.alarmId,
+        )
+    }
+
+    fun clearStoppedCycle() {
+        prefs.edit().remove(KEY_STOPPED_LEAVE).remove(KEY_STOPPED_ALARM_ID).apply()
+    }
+
+    /** С какого момента строить следующее срабатывание конкретного будильника. */
+    fun scheduleFromMillis(alarmId: Long, fromMillis: Long): Long =
+        stoppedCycle()?.scheduleFrom(alarmId, fromMillis) ?: fromMillis
+
+    /** Обычный сигнал с этим временем уже доставлен: страховочный повтор не нужен. */
+    fun signalDelivered(atMillis: Long): Boolean =
+        atMillis > 0L && prefs.getLong(KEY_SIGNAL_DELIVERED, 0L) == atMillis
+
+    fun markSignalDelivered(atMillis: Long) {
+        if (atMillis <= 0L) return
+        prefs.edit().putLong(KEY_SIGNAL_DELIVERED, atMillis).apply()
     }
 
     /**
@@ -368,6 +459,8 @@ class SettingsStore(context: Context) {
         const val KEY_ACTIVE_LEAVE = "active_cycle_leave"
         const val KEY_REMINDERS_ONLY = "reminders_only"
         const val KEY_ACTIVE_ALARM_ID = "active_cycle_alarm_id"
+        const val KEY_STOPPED_LEAVE = "stopped_cycle_leave"
+        const val KEY_STOPPED_ALARM_ID = "stopped_cycle_alarm_id"
         const val KEY_DEPARTURE_SPOKEN = "departure_spoken_"
         const val KEY_SIGNAL_DELIVERED = "signal_delivered_wake"
     }

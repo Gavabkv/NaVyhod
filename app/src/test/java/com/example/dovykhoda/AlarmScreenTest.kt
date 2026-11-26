@@ -69,6 +69,7 @@ class AlarmScreenTest {
                     onRequestFullScreenIntent = {},
                     onRequestTurnScreenOn = {},
                     onRequestRingChannel = {},
+                    onRequestDndAccess = {},
                     onExportLogs = {},
                 )
             }
@@ -331,7 +332,7 @@ class AlarmScreenTest {
         showScreen()
         compose.onNodeWithText("Идут напоминания о выходе").assertIsDisplayed()
         compose.onNodeWithTag("stop_cycle").performClick()
-        compose.onNodeWithText("Да, отключить").performClick()
+        compose.onNodeWithText("Да, остановить").performClick()
         val started = shadowOf(RuntimeEnvironment.getApplication()).nextStartedService
         assertNotNull(started)
         assertEquals(AlarmService.ACTION_STOP_ALL, started?.action)
@@ -370,7 +371,7 @@ class AlarmScreenTest {
             }
         }
         val titleLayout = mutableListOf<TextLayoutResult>()
-        compose.onNodeWithText("Выключить будильник, но напомнить о выходе", useUnmergedTree = true)
+        compose.onNodeWithText("Остановить музыку, но напомнить о выходе", useUnmergedTree = true)
             .performScrollTo().performSemanticsAction(SemanticsActions.GetTextLayoutResult) {
                 it(titleLayout)
             }
@@ -413,8 +414,8 @@ class AlarmScreenTest {
             compose.runOnIdle { darkTheme.value = dark }
             for ((title, foreground) in listOf(
                 "Тишина" to AlarmButtonDark,
-                "Выключить будильник, но напомнить о выходе" to Color.White,
-                "Отключить будильник" to AlarmButtonLight,
+                "Остановить музыку, но напомнить о выходе" to Color.White,
+                "Остановить сигналы" to AlarmButtonLight,
             )) {
                 val layout = mutableListOf<TextLayoutResult>()
                 compose.onNodeWithText(title, useUnmergedTree = true).performScrollTo()

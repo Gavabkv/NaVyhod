@@ -65,6 +65,7 @@ fun AppScreen(
     onRequestFullScreenIntent: () -> Unit,
     onRequestTurnScreenOn: () -> Unit,
     onRequestRingChannel: () -> Unit,
+    onRequestDndAccess: () -> Unit,
     onExportLogs: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -187,6 +188,7 @@ fun AppScreen(
                     alarms = alarms,
                     settings = settings,
                     activeCycle = store.activeCycle(),
+                    stoppedCycle = store.stoppedCycle(),
                     nowMillis = nowMillis,
                     onToggle = ::toggleAlarm,
                     onOpen = { editingId = it },
@@ -196,6 +198,7 @@ fun AppScreen(
                     settings = settings,
                     alarms = alarms,
                     activeCycle = store.activeCycle(),
+                    stoppedCycle = store.stoppedCycle(),
                     nowMillis = nowMillis,
                     onChange = ::applySettings,
                     onRequestExactAlarms = onRequestExactAlarms,
@@ -204,6 +207,7 @@ fun AppScreen(
                     onRequestFullScreenIntent = onRequestFullScreenIntent,
                     onRequestTurnScreenOn = onRequestTurnScreenOn,
                     onRequestRingChannel = onRequestRingChannel,
+                    onRequestDndAccess = onRequestDndAccess,
                     onExportLogs = onExportLogs,
                 )
             }
@@ -216,6 +220,7 @@ private fun AlarmsTab(
     alarms: List<AlarmItem>,
     settings: AlarmSettings,
     activeCycle: SettingsStore.ActiveCycle?,
+    stoppedCycle: SettingsStore.StoppedCycle?,
     nowMillis: Long,
     onToggle: (Long, Boolean) -> Unit,
     onOpen: (Long) -> Unit,
@@ -255,6 +260,7 @@ private fun AlarmsTab(
             AlarmCard(
                 alarm = alarm,
                 settings = settings,
+                stoppedCycle = stoppedCycle,
                 nowMillis = nowMillis,
                 onToggle = { onToggle(alarm.id, it) },
                 onOpen = { onOpen(alarm.id) },
@@ -266,18 +272,18 @@ private fun AlarmsTab(
     if (confirmStop) {
         AlertDialog(
             onDismissRequest = { confirmStop = false },
-            title = { Text("Отключить будильник?") },
+            title = { Text("Остановить сигналы?") },
             text = {
                 Text(
-                    "Сигналы и напоминания этого будильника остановятся. " +
-                        "Остальные будильники продолжат работать; включить его снова можно в списке.",
+                    "Сигналы и напоминания этого цикла остановятся. " +
+                        "Будильник останется включённым и зазвонит в следующий раз по расписанию.",
                 )
             },
             confirmButton = {
                 TextButton(onClick = {
                     confirmStop = false
                     AlarmService.stopAlarm(context)
-                }) { Text("Да, отключить") }
+                }) { Text("Да, остановить") }
             },
             dismissButton = {
                 TextButton(onClick = { confirmStop = false }) { Text("Отмена") }
@@ -309,7 +315,7 @@ private fun CycleBanner(cycle: SettingsStore.ActiveCycle, onStop: () -> Unit) {
                 )
             }
             TextButton(onClick = onStop, modifier = Modifier.testTag("stop_cycle")) {
-                Text("Отключить")
+                Text("Остановить")
             }
         }
     }
@@ -319,6 +325,7 @@ private fun CycleBanner(cycle: SettingsStore.ActiveCycle, onStop: () -> Unit) {
 private fun AlarmCard(
     alarm: AlarmItem,
     settings: AlarmSettings,
+    stoppedCycle: SettingsStore.StoppedCycle?,
     nowMillis: Long,
     onToggle: (Boolean) -> Unit,
     onOpen: () -> Unit,
@@ -342,7 +349,8 @@ private fun AlarmCard(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 if (alarm.scheduled) {
-                    val next = SchedulePlanner.nextTrigger(nowMillis, alarm.toSettings(settings))
+                    val from = stoppedCycle?.scheduleFrom(alarm.id, nowMillis) ?: nowMillis
+                    val next = SchedulePlanner.nextTrigger(from, alarm.toSettings(settings))
                     Text(
                         "Ближайший сигнал: ${formatWhen(next.atMillis, nowMillis)}",
                         style = MaterialTheme.typography.bodySmall,

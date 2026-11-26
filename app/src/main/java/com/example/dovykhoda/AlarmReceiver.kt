@@ -39,8 +39,12 @@ class AlarmReceiver : BroadcastReceiver() {
         // «опоздание»-цикл глушил бы свежий сигнал.
         val newerCycle = active != null &&
             wakeMillis > active.wakeMillis && leaveMillis > active.leaveMillis
-        val reminders = active != null && !newerCycle && (active.remindersOnly ||
-            (now >= active.leaveMillis && active.leaveMillis != leaveMillis))
+        // Режим «напомнить» распространяется только на сигналы своего цикла.
+        // Без сверки будильника напоминания одного будильника съедали сигнал
+        // другого, и тот выходил как «Вы опоздали».
+        val sameCycle = active != null && !newerCycle &&
+            active.matches(wakeMillis, leaveMillis, alarmId)
+        val reminders = sameCycle && active!!.remindersOnly
         AlarmLog.event(
             "alarm_trigger",
             "action" to intent.action,
@@ -70,10 +74,10 @@ class AlarmReceiver : BroadcastReceiver() {
             return
         }
         if (intent.getBooleanExtra(AlarmScheduler.EXTRA_TRIGGER_RETRY, false) &&
-            store.signalDelivered(wakeMillis)
+            store.signalDelivered(atMillis)
         ) {
             // Страховочный повтор после уже прозвучавшего сигнала.
-            AlarmLog.event("alarm_retry_deduped", "wake" to AlarmLog.formatTime(wakeMillis))
+            AlarmLog.event("alarm_retry_deduped", "at" to AlarmLog.formatTime(atMillis))
             return
         }
 
@@ -101,6 +105,9 @@ class AlarmReceiver : BroadcastReceiver() {
                 AlarmLog.event("service_start_alarm", "at" to AlarmLog.formatTime(atMillis))
                 AlarmService.start(app, trigger = trigger)
             }
+            // Отметка ставится сразу после успешного запуска: повтор через
+            // 30 секунд не должен звонить, даже если сервис ещё не отметил сигнал.
+            store.markSignalDelivered(atMillis)
         }.onFailure {
             Log.e(TAG, "cannot start alarm service", it)
             AlarmLog.failure("service_start_failed", it, "action" to intent.action)

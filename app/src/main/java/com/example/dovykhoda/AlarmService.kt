@@ -178,8 +178,12 @@ class AlarmService : Service() {
         }
 
         val active = store.activeCycle()
-        if (!test && active != null && (active.remindersOnly ||
-            (now >= active.leaveMillis && (active.leaveMillis != leaveMillis || lateJob?.isActive == true)))
+        val wakeMillis = intent.getLongExtra(AlarmScheduler.EXTRA_CYCLE_WAKE, 0L)
+        // Режим «напомнить» относится только к своему циклу. Сигнал другого
+        // будильника обязан звонить, даже если рядом идут напоминания.
+        val sameCycle = active != null && active.matches(wakeMillis, leaveMillis, alarmId)
+        if (!test && sameCycle && (active!!.remindersOnly ||
+            (now >= active.leaveMillis && lateJob?.isActive == true))
         ) {
             AlarmLog.event(
                 "signal_to_reminders",
@@ -189,11 +193,10 @@ class AlarmService : Service() {
             resumeReminders()
             return
         }
-        val wakeMillis = intent.getLongExtra(AlarmScheduler.EXTRA_CYCLE_WAKE, 0L)
         if (!test) {
             store.setActiveCycle(SettingsStore.ActiveCycle(wakeMillis, leaveMillis, alarmId = alarmId))
             // Повтор через 30 секунд после доставленного сигнала звонить не должен.
-            store.markSignalDelivered(wakeMillis)
+            store.markSignalDelivered(atMillis)
         }
         releaseAll()
         stopForegroundNow()
@@ -285,13 +288,12 @@ class AlarmService : Service() {
         )
         if (!testMode) {
             val cycle = store.activeCycle()
-            if (cycle != null && cycle.alarmId > 0L) {
-                // Выключается только тот будильник, который звенел.
-                store.setAlarmEnabled(cycle.alarmId, false)
-            } else {
-                store.save(store.load().copy(enabled = false))
+            if (cycle != null) {
+                // Останавливаются только сигналы текущего цикла. Будильник
+                // остаётся включённым: завтра он должен зазвонить снова.
+                store.markCycleStopped(cycle)
+                store.clearActiveCycle()
             }
-            store.clearActiveCycle()
         }
         finishSession(refresh = false)
         val settings = store.load()

@@ -79,7 +79,7 @@ object StatusNotifier {
                 "$text\nПробуждение в ${settings.wakeLabel} · выход в ${settings.leaveLabel}",
             ))
             .setAutoCancel(false)
-            .addAction(0, "Выключить", stopConfirmIntent(context, remainingMinutes))
+            .addAction(0, "Остановить", stopConfirmIntent(context, remainingMinutes))
             .build()
     }
 
@@ -99,7 +99,7 @@ object StatusNotifier {
             .setFullScreenIntent(fullScreenIntent(context, false, remainingMinutes), true)
             .addAction(0, "Отложить", silenceIntent(context))
             .addAction(0, "Напомнить", remindConfirmIntent(context, remainingMinutes))
-            .addAction(0, "Выключить", stopConfirmIntent(context, remainingMinutes))
+            .addAction(0, "Остановить", stopConfirmIntent(context, remainingMinutes))
             .build()
     }
 
@@ -130,7 +130,7 @@ object StatusNotifier {
             .setStyle(NotificationCompat.BigTextStyle().bigText(text))
             .setAutoCancel(false)
             .setOngoing(true)
-            .addAction(0, "Выключить", stopConfirmIntent(context,
+            .addAction(0, "Остановить", stopConfirmIntent(context,
                 SchedulePlanner.remainingMinutes(System.currentTimeMillis(), leaveMillis)))
             .build()
     }
@@ -153,7 +153,7 @@ object StatusNotifier {
             .setAutoCancel(false)
             .setOngoing(true)
             .addAction(0, "Отложить", silenceIntent(context))
-            .addAction(0, "Выключить", fullScreenIntent(context, true, 0, lateMinutes))
+            .addAction(0, "Остановить", fullScreenIntent(context, true, 0, lateMinutes))
             .build()
     }
 
@@ -203,8 +203,10 @@ object StatusNotifier {
             cancel(context)
             return
         }
+        val stopped = store.stoppedCycle()
         val current = alarms.firstNotNullOfOrNull { alarm ->
-            val trigger = SchedulePlanner.nextTrigger(now, alarm.toSettings(settings))
+            val from = stopped?.scheduleFrom(alarm.id, now) ?: now
+            val trigger = SchedulePlanner.nextTrigger(from, alarm.toSettings(settings))
             if (now >= trigger.cycleWakeMillis && now < trigger.cycleLeaveMillis) alarm to trigger else null
         }
         if (current != null) {
@@ -215,7 +217,10 @@ object StatusNotifier {
             ))
             return
         }
-        val next = SchedulePlanner.nextAlarmWake(now, alarms, settings)
+        val next = alarms.mapNotNull { alarm ->
+            val from = stopped?.scheduleFrom(alarm.id, now) ?: now
+            alarm to SchedulePlanner.nextWakeMillis(from, alarm.toSettings(settings))
+        }.minByOrNull { it.second }
         if (next != null && next.second - PRE_NOTIFY_LEAD_MS <= now) {
             showScheduled(context, next.first.toSettings(settings), next.second)
         } else {
