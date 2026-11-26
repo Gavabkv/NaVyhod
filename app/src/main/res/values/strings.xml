@@ -80,6 +80,7 @@
     <string name="settings_diagnostics">Diagnostics</string>
     <string name="settings_diagnostics_text">If the alarm did not work as expected, send the log — it shows what happened on the device.</string>
     <string name="settings_send_logs">Send logs</string>
+    <string name="settings_github">Source code on GitHub</string>
 
     <string name="permissions_title">Permissions and warnings</string>
     <string name="permission_missing_hint">Not allowed — the alarm may not ring</string>

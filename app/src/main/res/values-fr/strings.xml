@@ -80,6 +80,7 @@
     <string name="settings_diagnostics">Diagnostic</string>
     <string name="settings_diagnostics_text">Si l’alarme ne s’est pas comportée comme prévu, envoyez le journal — il montre ce qui s’est passé sur l’appareil.</string>
     <string name="settings_send_logs">Envoyer les journaux</string>
+    <string name="settings_github">Code source sur GitHub</string>
 
     <string name="permissions_title">Autorisations et avertissements</string>
     <string name="permission_missing_hint">Non autorisé — l’alarme peut ne pas sonner</string>

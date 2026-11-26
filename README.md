@@ -1,5 +1,9 @@
 # На выход
 
+[**Русский**](README.md) · [English](README.en.md) · [Español](README.es.md) ·
+[Deutsch](README.de.md) · [日本語](README.ja.md) · [Français](README.fr.md) ·
+[Português](README.pt.md) · [Italiano](README.it.md)
+
 Будильник для Android с двумя временами на каждый будильник: **пробуждение**
 и **выход из дома**. Будильников может быть несколько — у каждого свои дни
 недели, времена и настройки.
@@ -25,6 +29,16 @@
   испанский, немецкий, японский, французский, португальский и итальянский.
   Язык берётся из системы, его можно выбрать вручную в настройках — меню
   находится между «Оформлением» и «Диагностикой».
+
+## Скриншоты
+
+| Будильники | Редактор будильника | Окно сигнала |
+|:---:|:---:|:---:|
+| ![Будильники](docs/screenshots/ru-alarms.png) | ![Редактор](docs/screenshots/ru-editor.png) | ![Сигнал](docs/screenshots/ru-ringing.png) |
+
+| Настройки | Язык и GitHub | Тёмная тема |
+|:---:|:---:|:---:|
+| ![Настройки](docs/screenshots/ru-settings.png) | ![Низ настроек](docs/screenshots/ru-settings-bottom.png) | ![Тёмная тема](docs/screenshots/ru-alarms-dark.png) |
 
 ## Уведомления и окно сигнала
 

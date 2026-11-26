@@ -80,6 +80,7 @@
     <string name="settings_diagnostics">Diagnóstico</string>
     <string name="settings_diagnostics_text">Se o alarme não funcionou como esperado, envie o registro — nele se vê o que aconteceu no dispositivo.</string>
     <string name="settings_send_logs">Enviar registros</string>
+    <string name="settings_github">Código-fonte no GitHub</string>
 
     <string name="permissions_title">Permissões e avisos</string>
     <string name="permission_missing_hint">Não permitido — o alarme pode não tocar</string>

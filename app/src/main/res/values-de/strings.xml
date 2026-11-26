@@ -80,6 +80,7 @@
     <string name="settings_diagnostics">Diagnose</string>
     <string name="settings_diagnostics_text">Wenn der Alarm nicht wie erwartet funktioniert hat, senden Sie das Protokoll — darin steht, was auf dem Gerät passiert ist.</string>
     <string name="settings_send_logs">Protokolle senden</string>
+    <string name="settings_github">Quellcode auf GitHub</string>
 
     <string name="permissions_title">Berechtigungen und Warnungen</string>
     <string name="permission_missing_hint">Nicht erlaubt — der Alarm klingelt möglicherweise nicht</string>

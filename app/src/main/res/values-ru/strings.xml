@@ -80,6 +80,7 @@
     <string name="settings_diagnostics">Диагностика</string>
     <string name="settings_diagnostics_text">Если будильник сработал не так, как ожидалось, отправьте журнал — в нём видно, что происходило на устройстве.</string>
     <string name="settings_send_logs">Отправить логи</string>
+    <string name="settings_github">Исходный код на GitHub</string>
 
     <string name="permissions_title">Разрешения и предупреждения</string>
     <string name="permission_missing_hint">Не разрешено — будильник может не сработать</string>

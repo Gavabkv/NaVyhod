@@ -33,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -295,7 +296,35 @@ fun SettingsTab(
                 Text(stringResource(R.string.settings_send_logs))
             }
         }
+        Spacer(Modifier.height(12.dp))
+
+        GitHubCard()
         Spacer(Modifier.height(24.dp))
+    }
+}
+
+@Composable
+private fun GitHubCard() {
+    val uriHandler = LocalUriHandler.current
+    ScreenCard("GitHub") {
+        Surface(
+            onClick = { uriHandler.openUri(GITHUB_URL) },
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            modifier = Modifier.fillMaxWidth().testTag("github_link"),
+        ) {
+            Column(Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
+                Text(
+                    stringResource(R.string.settings_github),
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+                Text(
+                    GITHUB_URL.removePrefix("https://"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
     }
 }
 
@@ -483,3 +512,5 @@ private fun dndBlocksAlarms(context: Context): Boolean {
     val policy = manager.notificationPolicy ?: return false
     return policy.priorityCategories and NotificationManager.Policy.PRIORITY_CATEGORY_ALARMS == 0
 }
+
+private const val GITHUB_URL = "https://github.com/Gavabkv/NaVyhod"

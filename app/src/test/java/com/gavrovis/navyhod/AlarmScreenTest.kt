@@ -373,6 +373,17 @@ class AlarmScreenTest {
     }
 
     @Test
+    fun `settings github link opens the repository`() {
+        showScreen()
+        compose.onNodeWithTag("tab_settings").performClick()
+        compose.onNodeWithTag("github_link").performScrollTo().assertIsDisplayed().performClick()
+        compose.runOnIdle {
+            val intent = shadowOf(RuntimeEnvironment.getApplication()).nextStartedActivity
+            assertEquals("https://github.com/Gavabkv/NaVyhod", intent?.data.toString())
+        }
+    }
+
+    @Test
     fun `reminders banner offers a confirmed stop of the running cycle`() {
         val leave = System.currentTimeMillis() + 10 * 60_000L
         store.setActiveCycle(SettingsStore.ActiveCycle(leave - 90 * 60_000L, leave, remindersOnly = true))

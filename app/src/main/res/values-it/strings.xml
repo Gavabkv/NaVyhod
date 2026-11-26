@@ -80,6 +80,7 @@
     <string name="settings_diagnostics">Diagnostica</string>
     <string name="settings_diagnostics_text">Se la sveglia non ha funzionato come previsto, invia il registro: mostra cosa è successo sul dispositivo.</string>
     <string name="settings_send_logs">Invia registri</string>
+    <string name="settings_github">Codice sorgente su GitHub</string>
 
     <string name="permissions_title">Autorizzazioni e avvisi</string>
     <string name="permission_missing_hint">Non consentito — la sveglia potrebbe non suonare</string>
