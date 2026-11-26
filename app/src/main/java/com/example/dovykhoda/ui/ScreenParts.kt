@@ -315,7 +315,7 @@ private fun TimeInputDialog(
                 ) {
                     TimeDigitsBox(
                         text = hourDigits,
-                        selected = hourSelected,
+                        selected = active == TimeField.Hour,
                         tag = "time_hour_input",
                         modifier = Modifier.weight(1f),
                         onClick = {
@@ -327,7 +327,7 @@ private fun TimeInputDialog(
                     Text(":", style = MaterialTheme.typography.headlineSmall)
                     TimeDigitsBox(
                         text = minuteDigits,
-                        selected = minuteSelected,
+                        selected = active == TimeField.Minute,
                         tag = "time_minute_input",
                         modifier = Modifier.weight(1f),
                         onClick = {

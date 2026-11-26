@@ -472,6 +472,12 @@ private fun DaysEditor(alarm: AlarmItem, onChange: (AlarmItem) -> Unit) {
 
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
         SelectChip(
+            text = "Каждый день",
+            selected = alarm.days.size == DayOfWeek.entries.size,
+            enabled = alarm.enabled,
+            tag = "day_preset_all",
+        ) { onChange(alarm.withDays(AlarmItem.ALL_DAYS)) }
+        SelectChip(
             text = "Будни",
             selected = alarm.days == AlarmItem.WEEKDAYS,
             enabled = alarm.enabled,
@@ -483,12 +489,6 @@ private fun DaysEditor(alarm: AlarmItem, onChange: (AlarmItem) -> Unit) {
             enabled = alarm.enabled,
             tag = "day_preset_weekend",
         ) { onChange(alarm.withDays(AlarmItem.WEEKEND)) }
-        SelectChip(
-            text = "Каждый день",
-            selected = alarm.days.size == DayOfWeek.entries.size,
-            enabled = alarm.enabled,
-            tag = "day_preset_all",
-        ) { onChange(alarm.withDays(AlarmItem.ALL_DAYS)) }
     }
     Spacer(Modifier.height(8.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {

@@ -93,7 +93,7 @@ class AlarmScreenTest {
         compose.onNodeWithTag("tab_settings").performClick()
         compose.onNodeWithTag("settings_title").assertIsDisplayed()
         compose.onNodeWithTag("interval_chip_5").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithTag("perm_exact").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("pre_notify").performScrollTo().assertIsDisplayed()
         compose.onNodeWithTag("tab_alarms").performClick()
         compose.onNodeWithTag("alarm_card_1").assertIsDisplayed()
     }
@@ -315,6 +315,13 @@ class AlarmScreenTest {
         compose.runOnIdle { assertTrue(store.load().preNotifyEnabled) }
         compose.onNodeWithTag("time_departure").performScrollTo().performClick().assertIsOff()
         compose.runOnIdle { assertFalse(store.load().announceTimeOnDeparture) }
+    }
+
+    @Test
+    fun `settings does not list granted permissions`() {
+        showScreen()
+        compose.onNodeWithTag("tab_settings").performClick()
+        compose.onNodeWithText("Разрешено").assertDoesNotExist()
     }
 
     @Test

@@ -128,7 +128,7 @@ fun SettingsTab(
                 title = "Начинать голос за",
                 valueLabel = formatDuration(settings.ttsLeadMinutes),
                 value = settings.ttsLeadMinutes,
-                range = 5..60,
+                range = 5..120,
                 step = 5,
                 tag = "tts_lead",
                 onChange = { onChange(settings.copy(ttsLeadMinutes = it)) },
@@ -158,68 +158,69 @@ fun SettingsTab(
                 onCheckedChange = { onChange(settings.copy(preNotifyEnabled = it)) },
             )
         }
-        Spacer(Modifier.height(12.dp))
 
-        ScreenCard("Разрешения и предупреждения") {
-            PermissionRow(
-                text = "Точные будильники",
-                granted = exactAllowed,
-                tag = "perm_exact",
-                action = "Настроить",
-                onAction = onRequestExactAlarms,
+        val permissionIssues = buildList {
+            if (!exactAllowed) add(
+                PermissionIssue("Точные будильники", "perm_exact", "Настроить", onRequestExactAlarms),
             )
-            PermissionRow(
-                text = "Уведомления",
-                granted = notificationsAllowed,
-                tag = "perm_notifications",
-                action = "Разрешить",
-                onAction = onRequestNotifications,
+            if (!notificationsAllowed) add(
+                PermissionIssue("Уведомления", "perm_notifications", "Разрешить", onRequestNotifications),
             )
-            PermissionRow(
-                text = "Исключение из экономии батареи",
-                granted = batteryExempt,
-                tag = "perm_battery",
-                action = "Настроить",
-                onAction = onRequestBatteryExemption,
+            if (!batteryExempt) add(
+                PermissionIssue(
+                    "Исключение из экономии батареи",
+                    "perm_battery",
+                    "Настроить",
+                    onRequestBatteryExemption,
+                ),
             )
-            PermissionRow(
-                text = "Полноэкранные уведомления",
-                granted = fullScreenAllowed,
-                tag = "perm_fullscreen",
-                action = "Разрешить",
-                onAction = onRequestFullScreenIntent,
+            if (!fullScreenAllowed) add(
+                PermissionIssue(
+                    "Полноэкранные уведомления",
+                    "perm_fullscreen",
+                    "Разрешить",
+                    onRequestFullScreenIntent,
+                ),
             )
-            PermissionRow(
-                text = "Включение экрана",
-                granted = turnScreenAllowed,
-                tag = "perm_turn_screen",
-                action = "Разрешить",
-                onAction = onRequestTurnScreenOn,
+            if (!turnScreenAllowed) add(
+                PermissionIssue("Включение экрана", "perm_turn_screen", "Разрешить", onRequestTurnScreenOn),
             )
-            PermissionRow(
-                text = "Громкий канал «Сигнал будильника»",
-                granted = ringChannelAllowed,
-                tag = "perm_ring_channel",
-                action = "Настроить",
-                onAction = onRequestRingChannel,
+            if (!ringChannelAllowed) add(
+                PermissionIssue(
+                    "Громкий канал «Сигнал будильника»",
+                    "perm_ring_channel",
+                    "Настроить",
+                    onRequestRingChannel,
+                ),
             )
-            if (volumeMuted) {
-                PermissionRow(
-                    text = "Звук будильника выключен — сигнала не будет слышно",
-                    granted = false,
-                    tag = "alarm_volume_muted",
-                    action = "Исправить",
-                    onAction = { openSettings(context, Settings.ACTION_SOUND_SETTINGS) },
-                )
-            }
-            if (dndBlocks) {
-                PermissionRow(
-                    text = "Режим «Не беспокоить» может заглушать будильник",
-                    granted = false,
-                    tag = "dnd_blocks_alarms",
-                    action = "Настроить",
-                    onAction = { openSettings(context, Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS) },
-                )
+            if (volumeMuted) add(
+                PermissionIssue(
+                    "Звук будильника выключен — сигнала не будет слышно",
+                    "alarm_volume_muted",
+                    "Исправить",
+                    { openSettings(context, Settings.ACTION_SOUND_SETTINGS) },
+                ),
+            )
+            if (dndBlocks) add(
+                PermissionIssue(
+                    "Режим «Не беспокоить» может заглушать будильник",
+                    "dnd_blocks_alarms",
+                    "Настроить",
+                    { openSettings(context, Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS) },
+                ),
+            )
+        }
+        if (permissionIssues.isNotEmpty()) {
+            Spacer(Modifier.height(12.dp))
+            ScreenCard("Разрешения и предупреждения") {
+                permissionIssues.forEach { issue ->
+                    PermissionRow(
+                        text = issue.text,
+                        tag = issue.tag,
+                        action = issue.action,
+                        onAction = issue.onAction,
+                    )
+                }
             }
         }
         Spacer(Modifier.height(12.dp))
@@ -286,7 +287,6 @@ private fun NextSignalInfo(
 @Composable
 private fun PermissionRow(
     text: String,
-    granted: Boolean,
     tag: String,
     action: String,
     onAction: () -> Unit,
@@ -299,23 +299,26 @@ private fun PermissionRow(
             Text(
                 text,
                 style = MaterialTheme.typography.bodyMedium,
-                color = if (granted) MaterialTheme.colorScheme.onSurface
-                else MaterialTheme.colorScheme.error,
+                color = MaterialTheme.colorScheme.error,
             )
             Text(
-                if (granted) "Разрешено" else "Не разрешено — будильник может не сработать",
+                "Не разрешено — будильник может не сработать",
                 style = MaterialTheme.typography.bodySmall,
-                color = if (granted) MaterialTheme.colorScheme.onSurfaceVariant
-                else MaterialTheme.colorScheme.error,
+                color = MaterialTheme.colorScheme.error,
             )
         }
-        if (!granted) {
-            TextButton(onClick = onAction, modifier = Modifier.testTag(tag)) {
-                Text(action)
-            }
+        TextButton(onClick = onAction, modifier = Modifier.testTag(tag)) {
+            Text(action)
         }
     }
 }
+
+private data class PermissionIssue(
+    val text: String,
+    val tag: String,
+    val action: String,
+    val onAction: () -> Unit,
+)
 
 private fun openSettings(context: Context, action: String) {
     runCatching { context.startActivity(Intent(action)) }
