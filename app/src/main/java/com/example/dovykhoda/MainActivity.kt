@@ -20,7 +20,7 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import com.example.dovykhoda.ui.AlarmScreen
+import com.example.dovykhoda.ui.AppScreen
 import com.example.dovykhoda.ui.theme.NaVykhodTheme
 
 class MainActivity : ComponentActivity() {
@@ -35,7 +35,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             NaVykhodTheme {
-                AlarmScreen(
+                AppScreen(
                     onRequestExactAlarms = ::openExactAlarmSettings,
                     onRequestNotifications = ::askNotifications,
                     onRequestBatteryExemption = ::askBatteryExemption,

@@ -180,20 +180,22 @@ object StatusNotifier {
 
     fun refresh(context: Context, settings: AlarmSettings) {
         if (AlarmService.isRinging) return
-        if (!settings.enabled) {
+        val store = SettingsStore(context)
+        val alarms = store.alarms().filter { it.scheduled }
+        if (!settings.enabled || alarms.isEmpty()) {
             cancel(context)
             return
         }
         NotificationManagerCompat.from(context).cancel(RING_NOTIFICATION_ID)
         val now = System.currentTimeMillis()
-        val store = SettingsStore(context)
         val active = store.activeCycle()
         if (active != null && (active.remindersOnly || now >= active.leaveMillis)) {
+            val view = store.settingsFor(active.alarmId) ?: settings
             val minutes = ((now - active.leaveMillis).coerceAtLeast(0L) / 60_000L).toInt()
             post(context, when {
                 active.remindersOnly -> buildReminders(context, active.leaveMillis)
                 minutes > 0 -> buildLate(context, minutes)
-                else -> buildActive(context, settings, 0)
+                else -> buildActive(context, view, 0)
             })
             return
         }
@@ -201,14 +203,24 @@ object StatusNotifier {
             cancel(context)
             return
         }
-        val next = SchedulePlanner.nextTrigger(now, settings)
-        if (now >= next.cycleWakeMillis && now < next.cycleLeaveMillis) {
-            post(context, buildActive(context, settings, SchedulePlanner.remainingMinutes(now, next.cycleLeaveMillis)))
+        val current = alarms.firstNotNullOfOrNull { alarm ->
+            val trigger = SchedulePlanner.nextTrigger(now, alarm.toSettings(settings))
+            if (now >= trigger.cycleWakeMillis && now < trigger.cycleLeaveMillis) alarm to trigger else null
+        }
+        if (current != null) {
+            val (alarm, trigger) = current
+            post(context, buildActive(
+                context, alarm.toSettings(settings),
+                SchedulePlanner.remainingMinutes(now, trigger.cycleLeaveMillis),
+            ))
             return
         }
-        val wakeMillis = SchedulePlanner.nextWakeMillis(now, settings)
-        if (wakeMillis - PRE_NOTIFY_LEAD_MS <= now) showScheduled(context, settings, wakeMillis)
-        else cancel(context)
+        val next = SchedulePlanner.nextAlarmWake(now, alarms, settings)
+        if (next != null && next.second - PRE_NOTIFY_LEAD_MS <= now) {
+            showScheduled(context, next.first.toSettings(settings), next.second)
+        } else {
+            cancel(context)
+        }
     }
 
     private fun fullScreenIntent(

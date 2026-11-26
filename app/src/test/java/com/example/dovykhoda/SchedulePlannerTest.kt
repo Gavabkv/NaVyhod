@@ -371,4 +371,61 @@ class SchedulePlannerTest {
         assertEquals("До выхода осталась 21 минута", SpeechText.remaining(21))
         assertEquals("Пора выходить", SpeechText.remaining(0))
     }
+
+    @Test
+    fun `next trigger skips days that are not selected`() {
+        val s = settings(7, 0, 8, 0).copy(days = setOf(java.time.DayOfWeek.MONDAY))
+        // Вторник 17 ноября 2026, утренний цикл уже прошёл.
+        val next = SchedulePlanner.nextTrigger(SchedulePlanner.toMillis(at(9, 0)), s)
+        assertEquals(
+            SchedulePlanner.toMillis(LocalDateTime.of(2026, 11, 23, 7, 0)),
+            next.cycleWakeMillis,
+        )
+        assertEquals(next.cycleWakeMillis, next.atMillis)
+    }
+
+    @Test
+    fun `next wake respects selected days`() {
+        val s = settings(7, 0, 8, 0).copy(days = setOf(java.time.DayOfWeek.MONDAY))
+        val wake = SchedulePlanner.nextWakeMillis(SchedulePlanner.toMillis(at(9, 0)), s)
+        assertEquals(SchedulePlanner.toMillis(LocalDateTime.of(2026, 11, 23, 7, 0)), wake)
+    }
+
+    @Test
+    fun `night cycle keeps signals after midnight even when the next day is off`() {
+        val s = settings(23, 0, 1, 0).copy(days = setOf(java.time.DayOfWeek.MONDAY))
+        // Понедельник 23 ноября 2026: выход во вторник, вторник в списке дней не выбран.
+        val next = SchedulePlanner.nextTrigger(
+            SchedulePlanner.toMillis(LocalDateTime.of(2026, 11, 23, 23, 30)), s,
+        )
+        assertEquals(
+            SchedulePlanner.toMillis(LocalDateTime.of(2026, 11, 23, 23, 35)),
+            next.atMillis,
+        )
+        assertEquals(
+            SchedulePlanner.toMillis(LocalDateTime.of(2026, 11, 24, 1, 0)),
+            next.cycleLeaveMillis,
+        )
+    }
+
+    @Test
+    fun `multi alarm helper picks the earliest enabled alarm`() {
+        val first = AlarmItem(id = 1, wakeHour = 9, wakeMinute = 0, leaveHour = 10, leaveMinute = 0, enabled = true)
+        val second = AlarmItem(id = 2, wakeHour = 6, wakeMinute = 30, leaveHour = 7, leaveMinute = 30, enabled = true)
+        val off = AlarmItem(id = 3, wakeHour = 5, wakeMinute = 0, leaveHour = 6, leaveMinute = 0, enabled = false)
+        val after = SchedulePlanner.toMillis(at(5, 0))
+        val picked = SchedulePlanner.nextAlarmTrigger(after, listOf(first, second, off), settings(7, 0, 8, 0))
+        assertEquals(2L, picked?.first?.id)
+        assertEquals(SchedulePlanner.toMillis(at(6, 30)), picked?.second?.atMillis)
+    }
+
+    @Test
+    fun `multi alarm helper ignores alarms with no selected days`() {
+        val noDays = AlarmItem(
+            id = 1, wakeHour = 6, wakeMinute = 0, leaveHour = 7, leaveMinute = 0,
+            days = emptySet(), enabled = true,
+        )
+        val after = SchedulePlanner.toMillis(at(5, 0))
+        assertNull(SchedulePlanner.nextAlarmTrigger(after, listOf(noDays), settings(7, 0, 8, 0)))
+    }
 }

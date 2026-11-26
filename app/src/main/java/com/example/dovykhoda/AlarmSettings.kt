@@ -1,5 +1,6 @@
 package com.example.dovykhoda
 
+import java.time.DayOfWeek
 import java.time.LocalTime
 
 /**
@@ -8,7 +9,8 @@ import java.time.LocalTime
  * wake*    — время пробуждения (первый сигнал),
  * leave*   — время выхода из дома (последний сигнал),
  * interval — с какой периодичностью играет музыка,
- * ttsLead  — за сколько минут до выхода начинать голосовые объявления.
+ * ttsLead  — за сколько минут до выхода начинать голосовые объявления,
+ * days     — по каким дням недели срабатывает будильник.
  */
 data class AlarmSettings(
     val wakeHour: Int = 7,
@@ -30,6 +32,7 @@ data class AlarmSettings(
     val enabled: Boolean = false,
     val preparationMinutes: Int = 90,
     val departureTimeOnly: Boolean = false,
+    val days: Set<DayOfWeek> = AlarmItem.ALL_DAYS,
 ) {
     val wakeLabel: String get() = formatTime(wakeHour, wakeMinute)
     val leaveLabel: String get() = formatTime(leaveHour, leaveMinute)

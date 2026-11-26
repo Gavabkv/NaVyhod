@@ -3,9 +3,17 @@ package com.example.dovykhoda
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.UserManager
+import org.json.JSONArray
+import org.json.JSONObject
+import java.time.DayOfWeek
 
 class SettingsStore(context: Context) {
-    data class ActiveCycle(val wakeMillis: Long, val leaveMillis: Long, val remindersOnly: Boolean = false)
+    data class ActiveCycle(
+        val wakeMillis: Long,
+        val leaveMillis: Long,
+        val remindersOnly: Boolean = false,
+        val alarmId: Long = 0L,
+    )
 
     private val prefs: SharedPreferences
 
@@ -40,11 +48,16 @@ class SettingsStore(context: Context) {
 
     fun load(): AlarmSettings {
         val legacyTime = prefs.getBoolean(KEY_SPEAK_TIME, true)
+        val alarms = alarms()
+        val active = activeCycle()
+        val focus = alarms.firstOrNull { it.id == active?.alarmId }
+            ?: alarms.firstOrNull { it.enabled }
+            ?: alarms.firstOrNull()
         return AlarmSettings(
-            wakeHour = prefs.getInt(KEY_WAKE_HOUR, 7),
-            wakeMinute = prefs.getInt(KEY_WAKE_MINUTE, 0),
-            leaveHour = prefs.getInt(KEY_LEAVE_HOUR, 8),
-            leaveMinute = prefs.getInt(KEY_LEAVE_MINUTE, 0),
+            wakeHour = focus?.wakeHour ?: 7,
+            wakeMinute = focus?.wakeMinute ?: 0,
+            leaveHour = focus?.leaveHour ?: 8,
+            leaveMinute = focus?.leaveMinute ?: 0,
             intervalMinutes = prefs.getInt(KEY_INTERVAL, 5),
             speakEnabled = prefs.getBoolean(KEY_SPEAK, true),
             announceTimeOnSignals = prefs.getBoolean(KEY_ANNOUNCE_SIGNALS, legacyTime),
@@ -53,16 +66,39 @@ class SettingsStore(context: Context) {
             ttsLeadMinutes = prefs.getInt(KEY_TTS_LEAD, 30),
             ringSeconds = prefs.getInt(KEY_RING_SECONDS, 40).coerceIn(20, 60),
             preNotifyEnabled = prefs.getBoolean(KEY_PRE_NOTIFY, true),
-            enabled = prefs.getBoolean(KEY_ENABLED, false),
-            preparationMinutes = prefs.getInt(KEY_PREPARATION, 90).coerceIn(40, 150),
-            departureTimeOnly = prefs.getBoolean(KEY_DEPARTURE_TIME_ONLY, false),
+            enabled = alarms.any { it.enabled },
+            preparationMinutes = focus?.preparationMinutes ?: 90,
+            departureTimeOnly = focus?.departureTimeOnly ?: false,
+            days = focus?.days ?: AlarmItem.ALL_DAYS,
         )
     }
 
     fun save(settings: AlarmSettings) {
         val previous = load()
+        val alarms = alarms()
         if (previous.enabled != settings.enabled) {
             clearActiveCycle()
+            // Старый «общий выключатель»: смена флага адресуется всем будильникам.
+            if (alarms.isNotEmpty()) {
+                persistAlarms(alarms.map { it.copy(enabled = settings.enabled) })
+            }
+        }
+        // Настройки времени продолжают жить в единственном будильнике,
+        // пока в списке не появится второй.
+        if (alarms.size <= 1) {
+            alarms.firstOrNull()?.let { alarm ->
+                val updated = alarm.copy(
+                    wakeHour = settings.wakeHour,
+                    wakeMinute = settings.wakeMinute,
+                    leaveHour = settings.leaveHour,
+                    leaveMinute = settings.leaveMinute,
+                    preparationMinutes = settings.preparationMinutes.coerceIn(40, 150),
+                    departureTimeOnly = settings.departureTimeOnly,
+                    days = settings.days,
+                    enabled = settings.enabled,
+                )
+                if (updated != alarm) persistAlarms(listOf(updated))
+            }
         }
         if (previous.wakeHour != settings.wakeHour || previous.wakeMinute != settings.wakeMinute ||
             previous.leaveHour != settings.leaveHour || previous.leaveMinute != settings.leaveMinute
@@ -132,12 +168,111 @@ class SettingsStore(context: Context) {
         )
     }
 
+    /** Все будильники. При первом обращении старые настройки превращаются в один будильник. */
+    fun alarms(): List<AlarmItem> {
+        val raw = prefs.getString(KEY_ALARMS, null)
+        if (raw == null) {
+            val legacy = AlarmItem(
+                id = 1L,
+                wakeHour = prefs.getInt(KEY_WAKE_HOUR, 7),
+                wakeMinute = prefs.getInt(KEY_WAKE_MINUTE, 0),
+                leaveHour = prefs.getInt(KEY_LEAVE_HOUR, 8),
+                leaveMinute = prefs.getInt(KEY_LEAVE_MINUTE, 0),
+                preparationMinutes = prefs.getInt(KEY_PREPARATION, 90).coerceIn(40, 150),
+                departureTimeOnly = prefs.getBoolean(KEY_DEPARTURE_TIME_ONLY, false),
+                enabled = prefs.getBoolean(KEY_ENABLED, false),
+            )
+            persistAlarms(listOf(legacy))
+            AlarmLog.event("alarms_migrated", "wake" to legacy.wakeLabel,
+                "leave" to legacy.leaveLabel, "enabled" to legacy.enabled)
+            return listOf(legacy)
+        }
+        return runCatching { parseAlarms(raw) }.getOrElse {
+            AlarmLog.failure("alarms_parse_failed", it)
+            emptyList()
+        }
+    }
+
+    fun alarm(id: Long): AlarmItem? = alarms().firstOrNull { it.id == id }
+
+    fun nextAlarmId(): Long = AlarmItem.newId(alarms())
+
+    fun saveAlarms(items: List<AlarmItem>) {
+        persistAlarms(items)
+        AlarmLog.event("alarms_saved", "count" to items.size,
+            "enabled" to items.count { it.enabled })
+    }
+
+    fun addAlarm(alarm: AlarmItem) = saveAlarms(alarms() + alarm)
+
+    fun updateAlarm(alarm: AlarmItem) {
+        val updated = alarms().map { if (it.id == alarm.id) alarm else it }
+        saveAlarms(updated)
+    }
+
+    fun deleteAlarm(id: Long) {
+        saveAlarms(alarms().filterNot { it.id == id })
+    }
+
+    /** Отключение одного будильника; id=0 — старый одиночный режим без списка. */
+    fun setAlarmEnabled(id: Long, enabled: Boolean) {
+        if (id == 0L) {
+            save(load().copy(enabled = enabled))
+            return
+        }
+        val alarm = alarm(id) ?: return
+        updateAlarm(alarm.copy(enabled = enabled && alarm.days.isNotEmpty()))
+    }
+
+    /** Настройки одного будильника поверх глобальных; null — если будильника нет. */
+    fun settingsFor(alarmId: Long, global: AlarmSettings = load()): AlarmSettings? =
+        alarm(alarmId)?.toSettings(global)
+
+    private fun parseAlarms(raw: String): List<AlarmItem> {
+        val array = JSONArray(raw)
+        return buildList {
+            for (index in 0 until array.length()) {
+                val item = array.getJSONObject(index)
+                add(AlarmItem(
+                    id = item.getLong("id"),
+                    wakeHour = item.getInt("wakeHour"),
+                    wakeMinute = item.getInt("wakeMinute"),
+                    leaveHour = item.getInt("leaveHour"),
+                    leaveMinute = item.getInt("leaveMinute"),
+                    preparationMinutes = item.optInt("preparation", 90).coerceIn(40, 150),
+                    departureTimeOnly = item.optBoolean("departureOnly", false),
+                    days = AlarmItem.fromMask(item.optInt("days", 0x7F)),
+                    enabled = item.optBoolean("enabled", false),
+                ))
+            }
+        }
+    }
+
+    private fun persistAlarms(items: List<AlarmItem>) {
+        val array = JSONArray()
+        items.forEach { alarm ->
+            array.put(JSONObject().apply {
+                put("id", alarm.id)
+                put("wakeHour", alarm.wakeHour)
+                put("wakeMinute", alarm.wakeMinute)
+                put("leaveHour", alarm.leaveHour)
+                put("leaveMinute", alarm.leaveMinute)
+                put("preparation", alarm.preparationMinutes)
+                put("departureOnly", alarm.departureTimeOnly)
+                put("days", alarm.daysMask)
+                put("enabled", alarm.enabled)
+            })
+        }
+        prefs.edit().putString(KEY_ALARMS, array.toString()).apply()
+    }
+
     fun activeCycle(): ActiveCycle? {
         val leave = prefs.getLong(KEY_ACTIVE_LEAVE, 0L)
         if (leave == 0L) return null
         return ActiveCycle(
             prefs.getLong(KEY_ACTIVE_WAKE, 0L), leave,
             prefs.getBoolean(KEY_REMINDERS_ONLY, false),
+            prefs.getLong(KEY_ACTIVE_ALARM_ID, 0L),
         )
     }
 
@@ -147,6 +282,7 @@ class SettingsStore(context: Context) {
             .putLong(KEY_ACTIVE_WAKE, cycle.wakeMillis)
             .putLong(KEY_ACTIVE_LEAVE, cycle.leaveMillis)
             .putBoolean(KEY_REMINDERS_ONLY, cycle.remindersOnly)
+            .putLong(KEY_ACTIVE_ALARM_ID, cycle.alarmId)
         if (previous != null && previous.leaveMillis != cycle.leaveMillis) {
             editor.remove(spokenKey(previous.leaveMillis))
         }
@@ -156,6 +292,7 @@ class SettingsStore(context: Context) {
             "wake" to AlarmLog.formatTime(cycle.wakeMillis),
             "leave" to AlarmLog.formatTime(cycle.leaveMillis),
             "remindersOnly" to cycle.remindersOnly,
+            "alarmId" to cycle.alarmId,
         )
     }
 
@@ -163,7 +300,7 @@ class SettingsStore(context: Context) {
         val cycle = activeCycle()
         if (cycle != null) AlarmLog.event("active_cycle_cleared")
         val editor = prefs.edit().remove(KEY_ACTIVE_WAKE).remove(KEY_ACTIVE_LEAVE)
-            .remove(KEY_REMINDERS_ONLY).remove(KEY_SIGNAL_DELIVERED)
+            .remove(KEY_REMINDERS_ONLY).remove(KEY_SIGNAL_DELIVERED).remove(KEY_ACTIVE_ALARM_ID)
         if (cycle != null) editor.remove(spokenKey(cycle.leaveMillis))
         editor.apply()
     }
@@ -226,9 +363,11 @@ class SettingsStore(context: Context) {
         const val KEY_ENABLED = "enabled"
         const val KEY_PREPARATION = "preparation_minutes"
         const val KEY_DEPARTURE_TIME_ONLY = "departure_time_only"
+        const val KEY_ALARMS = "alarms_json"
         const val KEY_ACTIVE_WAKE = "active_cycle_wake"
         const val KEY_ACTIVE_LEAVE = "active_cycle_leave"
         const val KEY_REMINDERS_ONLY = "reminders_only"
+        const val KEY_ACTIVE_ALARM_ID = "active_cycle_alarm_id"
         const val KEY_DEPARTURE_SPOKEN = "departure_spoken_"
         const val KEY_SIGNAL_DELIVERED = "signal_delivered_wake"
     }

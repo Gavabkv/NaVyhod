@@ -18,8 +18,9 @@ object AlarmScheduler {
     const val EXTRA_TRIGGER_AT = "extra_trigger_at"
     const val EXTRA_CYCLE_WAKE = "extra_cycle_wake"
     const val EXTRA_CYCLE_LEAVE = "extra_cycle_leave"
+    const val EXTRA_ALARM_ID = "extra_alarm_id"
 
-    private const val RC_TRIGGER = 42
+    private const val RC_TRIGGER_BASE = 1_000
     private const val RC_SHOW_APP = 43
     private const val RC_PRE_NOTIFY = 44
     private const val RC_TRIGGER_RETRY = 45
@@ -52,13 +53,24 @@ object AlarmScheduler {
         }
 
         val store = SettingsStore(context)
-        val active = store.activeCycle()
+        val alarms = store.alarms().filter { it.scheduled }
+        var active = store.activeCycle()
+        if (active != null && active.alarmId > 0L && store.alarm(active.alarmId)?.scheduled != true) {
+            // Цикл принадлежал будильнику, который выключили или удалили.
+            AlarmLog.event("active_cycle_dropped", "reason" to "alarm_off",
+                "alarmId" to active.alarmId)
+            store.clearActiveCycle()
+            AlarmService.disable(context)
+            StatusNotifier.cancel(context)
+            active = null
+        }
         AlarmLog.event(
             "reschedule",
             "from" to AlarmLog.formatTime(fromMillis),
             "wake" to settings.wakeLabel,
             "leave" to settings.leaveLabel,
             "enabled" to settings.enabled,
+            "alarms" to alarms.joinToString(";") { "${it.id}:${it.wakeLabel}-${it.leaveLabel}" },
             "exactAllowed" to canScheduleExact(context),
             "activeWake" to active?.let { AlarmLog.formatTime(it.wakeMillis) },
             "activeLeave" to active?.let { AlarmLog.formatTime(it.leaveMillis) },
@@ -70,7 +82,7 @@ object AlarmScheduler {
             fromMillis > active.leaveMillis + 5_000L
         ) {
             AlarmLog.event("reminders_expired", "leave" to AlarmLog.formatTime(active.leaveMillis))
-            store.save(settings.copy(enabled = false))
+            store.setAlarmEnabled(active.alarmId, false)
             store.clearActiveCycle()
             AlarmService.disable(context)
             StatusNotifier.cancel(context)
@@ -108,9 +120,8 @@ object AlarmScheduler {
             }
             // Опоздание живёт в текущем цикле: следующий день всё равно должен
             // быть заведён, иначе после долгого опоздания будильник пропадёт.
-            val next = SchedulePlanner.nextTrigger(fromMillis, settings)
-            scheduleAt(context, next)
-            schedulePreNotifyAt(context, settings, SchedulePlanner.nextWakeMillis(fromMillis, settings))
+            scheduleTriggers(context, alarms, settings, fromMillis)
+            schedulePreNotifyForNext(context, alarms, settings, fromMillis)
             return
         }
         if (active != null && !active.remindersOnly &&
@@ -124,11 +135,33 @@ object AlarmScheduler {
             AlarmLog.event("alarm_set_retry", "at" to AlarmLog.formatTime(at),
                 "wake" to AlarmLog.formatTime(active.wakeMillis))
             scheduleAt(context,
-                SchedulePlanner.ScheduledTrigger(at, active.wakeMillis, active.leaveMillis),
+                SchedulePlanner.ScheduledTrigger(at, active.wakeMillis, active.leaveMillis, active.alarmId),
                 ACTION_TRIGGER, retry = true)
         }
-        scheduleAt(context, SchedulePlanner.nextTrigger(fromMillis, settings))
-        schedulePreNotifyAt(context, settings, SchedulePlanner.nextWakeMillis(fromMillis, settings))
+        scheduleTriggers(context, alarms, settings, fromMillis)
+        schedulePreNotifyForNext(context, alarms, settings, fromMillis)
+    }
+
+    private fun scheduleTriggers(
+        context: Context,
+        alarms: List<AlarmItem>,
+        settings: AlarmSettings,
+        fromMillis: Long,
+    ) {
+        alarms.forEach { alarm ->
+            val next = SchedulePlanner.nextTrigger(fromMillis, alarm.toSettings(settings))
+            scheduleAt(context, next.copy(alarmId = alarm.id))
+        }
+    }
+
+    private fun schedulePreNotifyForNext(
+        context: Context,
+        alarms: List<AlarmItem>,
+        settings: AlarmSettings,
+        fromMillis: Long,
+    ) {
+        val next = SchedulePlanner.nextAlarmWake(fromMillis, alarms, settings) ?: return
+        schedulePreNotifyAt(context, next.first.toSettings(settings), next.second, next.first.id)
     }
 
     /** Schedule each departure prompt as an OS wake-up alarm, not a coroutine timer. */
@@ -195,7 +228,12 @@ object AlarmScheduler {
         }
     }
 
-    fun schedulePreNotifyAt(context: Context, settings: AlarmSettings, wakeMillis: Long) {
+    fun schedulePreNotifyAt(
+        context: Context,
+        settings: AlarmSettings,
+        wakeMillis: Long,
+        alarmId: Long = 0L,
+    ) {
         if (!settings.preNotifyEnabled) return
         val atMillis = wakeMillis - PRE_NOTIFY_LEAD_MS
         if (atMillis <= System.currentTimeMillis()) {
@@ -204,7 +242,7 @@ object AlarmScheduler {
             return
         }
         val manager = context.getSystemService(AlarmManager::class.java)
-        val operation = preNotifyIntent(context, wakeMillis)
+        val operation = preNotifyIntent(context, wakeMillis, alarmId)
         try {
             if (canScheduleExact(context)) {
                 manager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, atMillis, operation)
@@ -275,10 +313,19 @@ object AlarmScheduler {
     fun cancelAll(context: Context) {
         val manager = context.getSystemService(AlarmManager::class.java)
         manager.cancel(triggerIntent(context, ACTION_TRIGGER))
+        SettingsStore(context).alarms().forEach { alarm ->
+            manager.cancel(triggerIntent(context, ACTION_TRIGGER, alarmId = alarm.id))
+        }
         manager.cancel(triggerIntent(context, ACTION_TRIGGER, retry = true))
         manager.cancel(triggerIntent(context, ACTION_LATE))
         manager.cancel(preNotifyIntent(context, 0L))
         cancelDepartureReminders(context)
+    }
+
+    /** Снять запланированный сигнал удалённого будильника. */
+    fun cancelAlarm(context: Context, alarmId: Long) {
+        context.getSystemService(AlarmManager::class.java)
+            .cancel(triggerIntent(context, ACTION_TRIGGER, alarmId = alarmId))
     }
 
     private fun triggerIntent(
@@ -286,12 +333,14 @@ object AlarmScheduler {
         action: String,
         trigger: SchedulePlanner.ScheduledTrigger? = null,
         retry: Boolean = false,
+        alarmId: Long = 0L,
     ): PendingIntent {
         val intent = Intent(context, AlarmReceiver::class.java).setAction(action)
         if (trigger != null) {
             intent.putExtra(EXTRA_TRIGGER_AT, trigger.atMillis)
                 .putExtra(EXTRA_CYCLE_WAKE, trigger.cycleWakeMillis)
                 .putExtra(EXTRA_CYCLE_LEAVE, trigger.cycleLeaveMillis)
+                .putExtra(EXTRA_ALARM_ID, trigger.alarmId)
         }
         if (retry) intent.putExtra(EXTRA_TRIGGER_RETRY, true)
         return PendingIntent.getBroadcast(
@@ -299,7 +348,7 @@ object AlarmScheduler {
             when {
                 action == ACTION_LATE -> RC_LATE
                 retry -> RC_TRIGGER_RETRY
-                else -> RC_TRIGGER
+                else -> RC_TRIGGER_BASE + (alarmId % 900_000L).toInt()
             },
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
@@ -326,10 +375,11 @@ object AlarmScheduler {
         )
     }
 
-    private fun preNotifyIntent(context: Context, wakeMillis: Long): PendingIntent {
+    private fun preNotifyIntent(context: Context, wakeMillis: Long, alarmId: Long = 0L): PendingIntent {
         val intent = Intent(context, AlarmReceiver::class.java)
             .setAction(ACTION_PRE_NOTIFY)
             .putExtra(StatusNotifier.EXTRA_CYCLE_WAKE, wakeMillis)
+            .putExtra(EXTRA_ALARM_ID, alarmId)
         return PendingIntent.getBroadcast(
             context,
             RC_PRE_NOTIFY,

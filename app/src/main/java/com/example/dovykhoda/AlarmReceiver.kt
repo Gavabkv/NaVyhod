@@ -31,6 +31,8 @@ class AlarmReceiver : BroadcastReceiver() {
         val atMillis = intent.getLongExtra(AlarmScheduler.EXTRA_TRIGGER_AT, 0L)
         val wakeMillis = intent.getLongExtra(AlarmScheduler.EXTRA_CYCLE_WAKE, 0L)
         val leaveMillis = intent.getLongExtra(AlarmScheduler.EXTRA_CYCLE_LEAVE, 0L)
+        val alarmId = intent.getLongExtra(AlarmScheduler.EXTRA_ALARM_ID, 0L)
+        val alarm = if (alarmId > 0L) store.alarm(alarmId) else null
         val active = store.activeCycle()
         val lateMs = if (atMillis > 0L) now - atMillis else null
         // Новый цикл (следующий день) главнее вчерашнего: иначе застрявший
@@ -52,9 +54,15 @@ class AlarmReceiver : BroadcastReceiver() {
             "activeWake" to active?.let { AlarmLog.formatTime(it.wakeMillis) },
             "activeLeave" to active?.let { AlarmLog.formatTime(it.leaveMillis) },
             "remindersOnly" to active?.remindersOnly,
+            "alarmId" to alarmId,
         )
         if (!settings.enabled) {
             AlarmLog.event("alarm_ignored", "reason" to "disabled")
+            return
+        }
+        if (alarmId > 0L && (alarm == null || !alarm.scheduled)) {
+            // Сигнал уже удалённого или выключенного будильника.
+            AlarmLog.event("alarm_ignored", "reason" to "alarm_off", "alarmId" to alarmId)
             return
         }
         if (atMillis == 0L || wakeMillis == 0L || leaveMillis == 0L) {
@@ -81,10 +89,10 @@ class AlarmReceiver : BroadcastReceiver() {
             return
         }
         if (!reminders && intent.action == AlarmScheduler.ACTION_TRIGGER) {
-            store.setActiveCycle(SettingsStore.ActiveCycle(wakeMillis, leaveMillis))
+            store.setActiveCycle(SettingsStore.ActiveCycle(wakeMillis, leaveMillis, alarmId = alarmId))
         }
         AlarmScheduler.reschedule(app, settings, now, recoverLate = false)
-        val trigger = SchedulePlanner.ScheduledTrigger(atMillis, wakeMillis, leaveMillis)
+        val trigger = SchedulePlanner.ScheduledTrigger(atMillis, wakeMillis, leaveMillis, alarmId)
         runCatching {
             if (reminders || intent.action == AlarmScheduler.ACTION_LATE) {
                 AlarmLog.event("service_start_late", "leave" to AlarmLog.formatTime(active!!.leaveMillis))
@@ -109,7 +117,9 @@ class AlarmReceiver : BroadcastReceiver() {
         val minutes = intent.getIntExtra(AlarmScheduler.EXTRA_REMINDER_MINUTES, -1)
         val at = intent.getLongExtra(AlarmScheduler.EXTRA_TRIGGER_AT, 0L)
         val now = System.currentTimeMillis()
-        val valid = store.load().enabled && cycle?.remindersOnly == true &&
+        val cycleAlarm = if (cycle != null && cycle.alarmId > 0L) store.alarm(cycle.alarmId) else null
+        val alarmAlive = cycleAlarm == null || cycleAlarm.scheduled
+        val valid = store.load().enabled && alarmAlive && cycle?.remindersOnly == true &&
             cycle.leaveMillis == leave && minutes in listOf(20, 15, 10, 5, 0) &&
             at > 0L && kotlin.math.abs(now - at) <= 5 * 60_000L
         AlarmLog.event("departure_alarm_fired", "minutes" to minutes,
@@ -124,8 +134,10 @@ class AlarmReceiver : BroadcastReceiver() {
     }
 
     private fun handlePreNotify(app: Context, intent: Intent) {
-        val settings = SettingsStore(app).load()
+        val store = SettingsStore(app)
+        val settings = store.load()
         val wakeMillis = intent.getLongExtra(StatusNotifier.EXTRA_CYCLE_WAKE, 0L)
+        val alarmId = intent.getLongExtra(AlarmScheduler.EXTRA_ALARM_ID, 0L)
         if (!settings.enabled || !settings.preNotifyEnabled || wakeMillis <= System.currentTimeMillis()) {
             AlarmLog.event(
                 "pre_notify_ignored",
@@ -135,8 +147,9 @@ class AlarmReceiver : BroadcastReceiver() {
             )
             return
         }
-        AlarmLog.event("pre_notify_show", "wake" to AlarmLog.formatTime(wakeMillis))
-        StatusNotifier.showScheduled(app, settings, wakeMillis)
+        AlarmLog.event("pre_notify_show", "wake" to AlarmLog.formatTime(wakeMillis),
+            "alarmId" to alarmId)
+        StatusNotifier.showScheduled(app, store.settingsFor(alarmId) ?: settings, wakeMillis)
     }
 
     private companion object {

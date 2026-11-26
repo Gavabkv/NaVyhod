@@ -23,6 +23,7 @@ object SchedulePlanner {
         val atMillis: Long,
         val cycleWakeMillis: Long,
         val cycleLeaveMillis: Long,
+        val alarmId: Long = 0L,
     )
 
     fun nextTrigger(
@@ -32,8 +33,9 @@ object SchedulePlanner {
     ): ScheduledTrigger {
         val date = Instant.ofEpochMilli(afterMillis).atZone(zone).toLocalDate()
         val stepMillis = settings.intervalMinutes.coerceAtLeast(1) * 60_000L
-        return (-1L..2L).mapNotNull { offset ->
+        return (-1L..8L).mapNotNull { offset ->
             val wake = date.plusDays(offset).atTime(wakeTime(settings))
+            if (wake.dayOfWeek !in settings.days) return@mapNotNull null
             val wakeMillis = toMillis(wake, zone)
             val leaveMillis = toMillis(leaveFor(wake, settings), zone).coerceAtLeast(wakeMillis)
             val atMillis = when {
@@ -46,6 +48,28 @@ object SchedulePlanner {
             ScheduledTrigger(atMillis, wakeMillis, leaveMillis)
         }.minBy { it.atMillis }
     }
+
+    /** Ближайший сигнал среди включённых будильников. */
+    fun nextAlarmTrigger(
+        afterMillis: Long,
+        alarms: List<AlarmItem>,
+        settings: AlarmSettings,
+        zone: ZoneId = ZoneId.systemDefault(),
+    ): Pair<AlarmItem, ScheduledTrigger>? =
+        alarms.filter { it.scheduled }
+            .map { it to nextTrigger(afterMillis, it.toSettings(settings), zone) }
+            .minByOrNull { it.second.atMillis }
+
+    /** Ближайшее пробуждение среди включённых будильников. */
+    fun nextAlarmWake(
+        afterMillis: Long,
+        alarms: List<AlarmItem>,
+        settings: AlarmSettings,
+        zone: ZoneId = ZoneId.systemDefault(),
+    ): Pair<AlarmItem, Long>? =
+        alarms.filter { it.scheduled }
+            .map { it to nextWakeMillis(afterMillis, it.toSettings(settings), zone) }
+            .minByOrNull { it.second }
 
     fun departureReminders(leaveMillis: Long): List<Long> =
         listOf(20, 15, 10, 5, 0).map { leaveMillis - it * 60_000L }
@@ -152,7 +176,9 @@ object SchedulePlanner {
         zone: ZoneId = ZoneId.systemDefault(),
     ): Long {
         val date = Instant.ofEpochMilli(afterMillis).atZone(zone).toLocalDate()
-        return (0L..2L).map { toMillis(date.plusDays(it).atTime(wakeTime(settings)), zone) }
+        return (0L..8L).map { date.plusDays(it) }
+            .filter { it.dayOfWeek in settings.days }
+            .map { toMillis(it.atTime(wakeTime(settings)), zone) }
             .first { it > afterMillis }
     }
 

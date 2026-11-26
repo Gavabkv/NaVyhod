@@ -170,6 +170,12 @@ class AlarmService : Service() {
             stopSelf()
             return
         }
+        val alarmId = intent.getLongExtra(AlarmScheduler.EXTRA_ALARM_ID, 0L)
+        if (!test && alarmId > 0L && store.alarm(alarmId)?.scheduled != true) {
+            AlarmLog.event("signal_ignored", "reason" to "alarm_off", "alarmId" to alarmId)
+            stopSelf()
+            return
+        }
 
         val active = store.activeCycle()
         if (!test && active != null && (active.remindersOnly ||
@@ -185,7 +191,7 @@ class AlarmService : Service() {
         }
         val wakeMillis = intent.getLongExtra(AlarmScheduler.EXTRA_CYCLE_WAKE, 0L)
         if (!test) {
-            store.setActiveCycle(SettingsStore.ActiveCycle(wakeMillis, leaveMillis))
+            store.setActiveCycle(SettingsStore.ActiveCycle(wakeMillis, leaveMillis, alarmId = alarmId))
             // Повтор через 30 секунд после доставленного сигнала звонить не должен.
             store.markSignalDelivered(wakeMillis)
         }
@@ -278,7 +284,13 @@ class AlarmService : Service() {
             },
         )
         if (!testMode) {
-            store.save(store.load().copy(enabled = false))
+            val cycle = store.activeCycle()
+            if (cycle != null && cycle.alarmId > 0L) {
+                // Выключается только тот будильник, который звенел.
+                store.setAlarmEnabled(cycle.alarmId, false)
+            } else {
+                store.save(store.load().copy(enabled = false))
+            }
             store.clearActiveCycle()
         }
         finishSession(refresh = false)
@@ -290,12 +302,13 @@ class AlarmService : Service() {
     private fun handleRemindersOnly() {
         val store = SettingsStore(this)
         val cycle = store.activeCycle()
-        if (testMode || !store.load().enabled || cycle == null) {
+        if (testMode || !store.load().enabled || cycle == null || isCycleAlarmOff(cycle)) {
             AlarmLog.event(
                 "reminders_only_ignored",
                 "testMode" to testMode,
                 "enabled" to store.load().enabled,
                 "hasCycle" to (cycle != null),
+                "alarmOff" to (cycle?.let { isCycleAlarmOff(it) }),
             )
             return
         }
@@ -314,7 +327,8 @@ class AlarmService : Service() {
         val cycle = store.activeCycle()
         val now = System.currentTimeMillis()
         if (!store.load().enabled || cycle?.remindersOnly != true || cycle.leaveMillis != leaveMillis ||
-            minutes !in listOf(20, 15, 10, 5, 0) || atMillis <= 0L || now - atMillis > 5 * 60_000L
+            minutes !in listOf(20, 15, 10, 5, 0) || atMillis <= 0L || now - atMillis > 5 * 60_000L ||
+            cycle?.let { isCycleAlarmOff(it) } == true
         ) {
             AlarmLog.event("departure_reminder_ignored", "minutes" to minutes,
                 "leave" to AlarmLog.formatTime(leaveMillis), "activeLeave" to cycle?.leaveMillis)
@@ -392,7 +406,7 @@ class AlarmService : Service() {
             "lateActive" to (lateJob?.isActive == true),
             "sameSession" to (sessionCycle == cycle),
         )
-        if (!store.load().enabled || cycle == null) {
+        if (!store.load().enabled || cycle == null || isCycleAlarmOff(cycle)) {
             finishSession(refresh = false)
             return
         }
@@ -485,8 +499,15 @@ class AlarmService : Service() {
 
     private fun canContinueReminders(cycle: SettingsStore.ActiveCycle): Boolean {
         val store = SettingsStore(this)
-        return store.load().enabled && store.activeCycle() == cycle
+        return store.load().enabled && !isCycleAlarmOff(cycle) && store.activeCycle() == cycle
     }
+
+    /** Сработавший цикл относится к будильнику, который уже выключили или удалили. */
+    private fun isCycleAlarmOff(cycle: SettingsStore.ActiveCycle): Boolean =
+        cycle.alarmId > 0L && SettingsStore(this).alarm(cycle.alarmId)?.scheduled != true
+
+    private fun sessionSettings(settings: AlarmSettings): AlarmSettings =
+        sessionCycle?.let { SettingsStore(this).settingsFor(it.alarmId) } ?: settings
 
     private fun withCurrentTime(text: String, announceTime: Boolean): String =
         if (announceTime) "${SpeechText.currentTime(LocalTime.now())}. $text" else text
@@ -527,7 +548,7 @@ class AlarmService : Service() {
         val notification = when {
             lastLateMinutes > 0 -> StatusNotifier.buildLate(this, lastLateMinutes)
             cycle?.remindersOnly == true -> StatusNotifier.buildReminders(this, cycle.leaveMillis)
-            else -> StatusNotifier.buildActive(this, SettingsStore(this).load(), 0)
+            else -> StatusNotifier.buildActive(this, sessionSettings(SettingsStore(this).load()), 0)
         }
         startForegroundNow(notification)
     }
@@ -801,6 +822,7 @@ class AlarmService : Service() {
                 intent.putExtra(AlarmScheduler.EXTRA_TRIGGER_AT, it.atMillis)
                     .putExtra(AlarmScheduler.EXTRA_CYCLE_WAKE, it.cycleWakeMillis)
                     .putExtra(AlarmScheduler.EXTRA_CYCLE_LEAVE, it.cycleLeaveMillis)
+                    .putExtra(AlarmScheduler.EXTRA_ALARM_ID, it.alarmId)
             }
             ContextCompat.startForegroundService(context, intent)
         }
