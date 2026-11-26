@@ -3,6 +3,7 @@ package com.example.dovykhoda.ui
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -10,35 +11,25 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.TextFieldValue
-import kotlinx.coroutines.launch
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -258,25 +249,45 @@ private fun TimeInputDialog(
     onConfirm: (Int, Int) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    fun clock(hourOrMinute: Int) = hourOrMinute.toString().padStart(2, '0')
+    fun clock(value: Int) = value.toString().padStart(2, '0')
 
-    var hourField by remember { mutableStateOf(TextFieldValue(clock(initialHour))) }
-    var minuteField by remember { mutableStateOf(TextFieldValue(clock(initialMinute))) }
-    val hourFocus = remember { FocusRequester() }
-    val minuteFocus = remember { FocusRequester() }
-    val keyboard = LocalSoftwareKeyboardController.current
-    val scope = rememberCoroutineScope()
+    var hourDigits by remember { mutableStateOf(clock(initialHour)) }
+    var minuteDigits by remember { mutableStateOf(clock(initialMinute)) }
+    var active by remember { mutableStateOf(TimeField.Hour) }
+    // Выбранные цифры: следующая нажатая цифра заменяет их целиком.
+    var hourSelected by remember { mutableStateOf(true) }
+    var minuteSelected by remember { mutableStateOf(false) }
 
-    // Фокус сразу на часах, чтобы клавиатура появилась без лишнего нажатия.
-    // Ждём кадр: до первого layout FocusRequester ещё не привязан к полю.
-    LaunchedEffect(Unit) {
-        withFrameNanos { }
-        runCatching { hourFocus.requestFocus() }
-        keyboard?.show()
+    fun pressDigit(digit: Char) {
+        when (active) {
+            TimeField.Hour -> {
+                hourDigits = if (hourSelected || hourDigits.length >= 2) "$digit"
+                else hourDigits + digit
+                hourSelected = false
+                if (hourDigits.length == 2) {
+                    active = TimeField.Minute
+                    minuteSelected = true
+                }
+            }
+            TimeField.Minute -> {
+                minuteDigits = if (minuteSelected || minuteDigits.length >= 2) "$digit"
+                else minuteDigits + digit
+                minuteSelected = false
+            }
+        }
     }
 
-    val hour = hourField.text.toIntOrNull()
-    val minute = minuteField.text.toIntOrNull()
+    fun backspace() {
+        when (active) {
+            TimeField.Hour -> hourDigits = if (hourSelected) "" else hourDigits.dropLast(1)
+            TimeField.Minute -> minuteDigits = if (minuteSelected) "" else minuteDigits.dropLast(1)
+        }
+        hourSelected = false
+        minuteSelected = false
+    }
+
+    val hour = hourDigits.toIntOrNull()
+    val minute = minuteDigits.toIntOrNull()
     val valid = hour != null && hour in 0..23 && minute != null && minute in 0..59
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -285,52 +296,44 @@ private fun TimeInputDialog(
             Column {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
-                    OutlinedTextField(
-                        value = hourField,
-                        onValueChange = { value ->
-                            if (value.text != hourField.text) {
-                                val digits = applyTypedDigits(hourField.text, value.text)
-                                hourField = TextFieldValue(digits)
-                                // После двух цифр часов переходим к минутам следующим
-                                // кадром: иначе поле теряет фокус раньше, чем успевает
-                                // применить новое значение, и откатывается назад.
-                                if (digits.length == 2) {
-                                    scope.launch {
-                                        withFrameNanos { }
-                                        runCatching { minuteFocus.requestFocus() }
-                                    }
-                                }
-                            }
+                    TimeDigitsBox(
+                        text = hourDigits,
+                        selected = hourSelected,
+                        tag = "time_hour_input",
+                        modifier = Modifier.weight(1f),
+                        onClick = {
+                            active = TimeField.Hour
+                            hourSelected = true
+                            minuteSelected = false
                         },
-                        label = { Text("Часы") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
-                        modifier = Modifier
-                            .weight(1f)
-                            .testTag("time_hour_input")
-                            .focusRequester(hourFocus),
                     )
                     Text(":", style = MaterialTheme.typography.headlineSmall)
-                    OutlinedTextField(
-                        value = minuteField,
-                        onValueChange = { value ->
-                            if (value.text != minuteField.text) {
-                                val digits = applyTypedDigits(minuteField.text, value.text)
-                                minuteField = TextFieldValue(digits)
-                            }
+                    TimeDigitsBox(
+                        text = minuteDigits,
+                        selected = minuteSelected,
+                        tag = "time_minute_input",
+                        modifier = Modifier.weight(1f),
+                        onClick = {
+                            active = TimeField.Minute
+                            minuteSelected = true
+                            hourSelected = false
                         },
-                        label = { Text("Минуты") },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        singleLine = true,
-                        modifier = Modifier
-                            .weight(1f)
-                            .testTag("time_minute_input")
-                            .focusRequester(minuteFocus),
                     )
                 }
-                if (!valid && (hourField.text.isNotEmpty() || minuteField.text.isNotEmpty())) {
+                Spacer(Modifier.height(16.dp))
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    KeypadRow(listOf('1', '2', '3'), ::pressDigit)
+                    KeypadRow(listOf('4', '5', '6'), ::pressDigit)
+                    KeypadRow(listOf('7', '8', '9'), ::pressDigit)
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        KeypadButton("0", "time_digit_0", Modifier.weight(2f)) { pressDigit('0') }
+                        KeypadButton("\u232B", "time_backspace", Modifier.weight(1f)) { backspace() }
+                    }
+                }
+                if (!valid && (hourDigits.isNotEmpty() || minuteDigits.isNotEmpty())) {
+                    Spacer(Modifier.height(8.dp))
                     Text(
                         "Введите часы 0–23 и минуты 0–59",
                         style = MaterialTheme.typography.bodySmall,
@@ -352,23 +355,55 @@ private fun TimeInputDialog(
     )
 }
 
-/**
- * Цифры, которые нужно записать в поле после ввода [updated] поверх [previous].
- *
- * Системная клавиатура при передаче фокуса сбрасывает выделение, поэтому
- * полагаться на него нельзя. Вместо этого: если в поле уже две цифры, первая
- * введённая цифра заменяет всё содержимое (дальше набор продолжается).
- * Так пользователю не нужно ничего удалять перед вводом нового времени.
- */
-internal fun applyTypedDigits(previous: String, updated: String): String {
-    val typed = if (previous.length >= 2) {
-        when {
-            updated.startsWith(previous) -> updated.removePrefix(previous)
-            updated.endsWith(previous) -> updated.removeSuffix(previous)
-            else -> updated
-        }
-    } else {
-        updated
+private enum class TimeField { Hour, Minute }
+
+@Composable
+private fun TimeDigitsBox(
+    text: String,
+    selected: Boolean,
+    tag: String,
+    modifier: Modifier,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(12.dp),
+        color = if (selected) MaterialTheme.colorScheme.primaryContainer
+        else MaterialTheme.colorScheme.surfaceVariant,
+        contentColor = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
+        else MaterialTheme.colorScheme.onSurface,
+        modifier = modifier.testTag(tag),
+    ) {
+        Text(
+            text = text.ifEmpty { "–" },
+            modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+            style = MaterialTheme.typography.headlineMedium,
+            textAlign = TextAlign.Center,
+        )
     }
-    return typed.filter { it.isDigit() }.take(2)
+}
+
+@Composable
+private fun KeypadRow(digits: List<Char>, onDigit: (Char) -> Unit) {
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        digits.forEach { digit ->
+            KeypadButton(digit.toString(), "time_digit_$digit", Modifier.weight(1f)) { onDigit(digit) }
+        }
+    }
+}
+
+@Composable
+private fun KeypadButton(
+    label: String,
+    tag: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = modifier.height(48.dp).testTag(tag),
+        contentPadding = PaddingValues(0.dp),
+    ) {
+        Text(label, style = MaterialTheme.typography.titleMedium)
+    }
 }
