@@ -289,9 +289,24 @@ private fun TimeInputDialog(
     val hour = hourDigits.toIntOrNull()
     val minute = minuteDigits.toIntOrNull()
     val valid = hour != null && hour in 0..23 && minute != null && minute in 0..59
+
+    // Набор блокируем по мере ввода: часы не могут начаться с 3+,
+    // а «2» во втором разряде допускает только 0–3; минуты — не больше 59.
+    fun digitEnabled(digit: Char): Boolean = when (active) {
+        TimeField.Hour -> when {
+            hourSelected || hourDigits.isEmpty() -> digit <= '2'
+            hourDigits == "2" -> digit <= '3'
+            else -> true
+        }
+        TimeField.Minute -> when {
+            minuteSelected || minuteDigits.isEmpty() -> digit <= '5'
+            else -> true
+        }
+    }
+
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Время: $title") },
+        title = { Text(title) },
         text = {
             Column {
                 Row(
@@ -324,11 +339,13 @@ private fun TimeInputDialog(
                 }
                 Spacer(Modifier.height(16.dp))
                 Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    KeypadRow(listOf('1', '2', '3'), ::pressDigit)
-                    KeypadRow(listOf('4', '5', '6'), ::pressDigit)
-                    KeypadRow(listOf('7', '8', '9'), ::pressDigit)
+                    KeypadRow(listOf('1', '2', '3'), ::digitEnabled, ::pressDigit)
+                    KeypadRow(listOf('4', '5', '6'), ::digitEnabled, ::pressDigit)
+                    KeypadRow(listOf('7', '8', '9'), ::digitEnabled, ::pressDigit)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        KeypadButton("0", "time_digit_0", Modifier.weight(2f)) { pressDigit('0') }
+                        KeypadButton("0", "time_digit_0", Modifier.weight(2f), digitEnabled('0')) {
+                            pressDigit('0')
+                        }
                         KeypadButton("\u232B", "time_backspace", Modifier.weight(1f)) { backspace() }
                     }
                 }
@@ -368,9 +385,9 @@ private fun TimeDigitsBox(
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(12.dp),
-        color = if (selected) MaterialTheme.colorScheme.primaryContainer
+        color = if (selected) MaterialTheme.colorScheme.primary
         else MaterialTheme.colorScheme.surfaceVariant,
-        contentColor = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
+        contentColor = if (selected) MaterialTheme.colorScheme.onPrimary
         else MaterialTheme.colorScheme.onSurface,
         modifier = modifier.testTag(tag),
     ) {
@@ -378,16 +395,26 @@ private fun TimeDigitsBox(
             text = text.ifEmpty { "–" },
             modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
             style = MaterialTheme.typography.headlineMedium,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
             textAlign = TextAlign.Center,
         )
     }
 }
 
 @Composable
-private fun KeypadRow(digits: List<Char>, onDigit: (Char) -> Unit) {
+private fun KeypadRow(
+    digits: List<Char>,
+    enabled: (Char) -> Boolean,
+    onDigit: (Char) -> Unit,
+) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         digits.forEach { digit ->
-            KeypadButton(digit.toString(), "time_digit_$digit", Modifier.weight(1f)) { onDigit(digit) }
+            KeypadButton(
+                label = digit.toString(),
+                tag = "time_digit_$digit",
+                modifier = Modifier.weight(1f),
+                enabled = enabled(digit),
+            ) { onDigit(digit) }
         }
     }
 }
@@ -397,10 +424,12 @@ private fun KeypadButton(
     label: String,
     tag: String,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     onClick: () -> Unit,
 ) {
     OutlinedButton(
         onClick = onClick,
+        enabled = enabled,
         modifier = modifier.height(48.dp).testTag(tag),
         contentPadding = PaddingValues(0.dp),
     ) {

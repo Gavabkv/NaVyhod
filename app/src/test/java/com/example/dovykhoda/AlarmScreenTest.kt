@@ -218,13 +218,27 @@ class AlarmScreenTest {
     }
 
     @Test
-    fun `invalid typed time cannot be confirmed`() {
+    fun `keypad blocks digits that would make the time invalid`() {
         showScreen()
         openEditor()
         openTimeDialog()
+        // Часы начинаются только с 0, 1 или 2.
+        compose.onNodeWithTag("time_digit_3").assertIsNotEnabled()
+        compose.onNodeWithTag("time_digit_2").assertIsEnabled()
         compose.onNodeWithTag("time_digit_2").performClick()
+        // После «2» допустимы только 0–3.
+        compose.onNodeWithTag("time_digit_4").assertIsNotEnabled()
+        compose.onNodeWithTag("time_digit_3").performClick()
+        // Минуты начинаются только с 0–5.
+        compose.onNodeWithTag("time_digit_6").assertIsNotEnabled()
         compose.onNodeWithTag("time_digit_5").performClick()
-        compose.onNodeWithTag("time_confirm").assertIsNotEnabled()
+        compose.onNodeWithTag("time_digit_9").assertIsEnabled()
+        compose.onNodeWithTag("time_digit_9").performClick()
+        compose.onNodeWithTag("time_confirm").performClick()
+        compose.runOnIdle {
+            assertEquals("23:59", store.alarm(1L)?.wakeLabel)
+            assertEquals("01:29", store.alarm(1L)?.leaveLabel)
+        }
     }
 
     @Test
@@ -265,7 +279,7 @@ class AlarmScreenTest {
         openEditor()
         openTimeDialog()
         compose.onNodeWithTag("time_backspace").performClick()
-        compose.onNodeWithTag("time_digit_7").performClick()
+        compose.onNodeWithTag("time_digit_1").performClick()
         compose.onNodeWithTag("time_backspace").performClick()
         compose.onNodeWithTag("time_confirm").assertIsNotEnabled()
     }
