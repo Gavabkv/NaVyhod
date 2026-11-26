@@ -59,9 +59,12 @@ class AlarmScreenTest {
         store.save(AlarmSettings(enabled = true, preNotifyEnabled = false))
     }
 
-    private fun showScreen() {
+    private fun showScreen(
+        darkTheme: Boolean = false,
+        onDarkThemeChange: (Boolean) -> Unit = {},
+    ) {
         compose.setContent {
-            NaVykhodTheme {
+            NaVykhodTheme(darkTheme = darkTheme) {
                 AppScreen(
                     onRequestExactAlarms = {},
                     onRequestNotifications = {},
@@ -71,6 +74,8 @@ class AlarmScreenTest {
                     onRequestRingChannel = {},
                     onRequestDndAccess = {},
                     onExportLogs = {},
+                    darkTheme = darkTheme,
+                    onDarkThemeChange = onDarkThemeChange,
                 )
             }
         }
@@ -323,6 +328,15 @@ class AlarmScreenTest {
         showScreen()
         compose.onNodeWithTag("tab_settings").performClick()
         compose.onNodeWithText("Разрешено").assertDoesNotExist()
+    }
+
+    @Test
+    fun `settings theme switch reports the choice`() {
+        var choice: Boolean? = null
+        showScreen(onDarkThemeChange = { choice = it })
+        compose.onNodeWithTag("tab_settings").performClick()
+        compose.onNodeWithTag("theme_dark").performScrollTo().assertIsOff().performClick()
+        compose.runOnIdle { assertEquals(true, choice) }
     }
 
     @Test

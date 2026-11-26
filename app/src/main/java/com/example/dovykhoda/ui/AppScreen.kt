@@ -1,6 +1,7 @@
 package com.example.dovykhoda.ui
 
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -68,6 +69,8 @@ fun AppScreen(
     onRequestRingChannel: () -> Unit,
     onRequestDndAccess: () -> Unit,
     onExportLogs: () -> Unit,
+    darkTheme: Boolean = isSystemInDarkTheme(),
+    onDarkThemeChange: (Boolean) -> Unit = {},
 ) {
     val context = LocalContext.current
     val store = remember { SettingsStore(context) }
@@ -161,15 +164,10 @@ fun AppScreen(
         bottomBar = {
             val tabColors = NavigationBarItemDefaults.colors(
                 selectedIconColor = MaterialTheme.colorScheme.onPrimary,
-                selectedTextColor = MaterialTheme.colorScheme.onPrimary,
-                unselectedIconColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.65f),
-                unselectedTextColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.65f),
-                indicatorColor = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.22f),
+                selectedTextColor = MaterialTheme.colorScheme.primary,
+                indicatorColor = MaterialTheme.colorScheme.primary,
             )
-            NavigationBar(
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-            ) {
+            NavigationBar {
                 NavigationBarItem(
                     selected = tab == 0,
                     onClick = { tab = 0; editingId = null },
@@ -213,7 +211,9 @@ fun AppScreen(
                     activeCycle = store.activeCycle(),
                     stoppedCycle = store.stoppedCycle(),
                     nowMillis = nowMillis,
+                    darkTheme = darkTheme,
                     onChange = ::applySettings,
+                    onDarkThemeChange = onDarkThemeChange,
                     onRequestExactAlarms = onRequestExactAlarms,
                     onRequestNotifications = onRequestNotifications,
                     onRequestBatteryExemption = onRequestBatteryExemption,

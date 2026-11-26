@@ -43,7 +43,9 @@ fun SettingsTab(
     activeCycle: SettingsStore.ActiveCycle?,
     stoppedCycle: SettingsStore.StoppedCycle?,
     nowMillis: Long,
+    darkTheme: Boolean,
     onChange: (AlarmSettings) -> Unit,
+    onDarkThemeChange: (Boolean) -> Unit,
     onRequestExactAlarms: () -> Unit,
     onRequestNotifications: () -> Unit,
     onRequestBatteryExemption: () -> Unit,
@@ -83,6 +85,17 @@ fun SettingsTab(
 
         ScreenCard("Ближайший сигнал") {
             NextSignalInfo(alarms, settings, activeCycle, stoppedCycle, nowMillis)
+        }
+        Spacer(Modifier.height(12.dp))
+
+        ScreenCard("Оформление") {
+            ToggleRow(
+                title = "Тёмная тема",
+                subtitle = "Светлый или тёмный вид приложения",
+                checked = darkTheme,
+                tag = "theme_dark",
+                onCheckedChange = onDarkThemeChange,
+            )
         }
         Spacer(Modifier.height(12.dp))
 

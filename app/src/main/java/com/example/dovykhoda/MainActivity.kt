@@ -16,6 +16,11 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -45,7 +50,11 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            NaVykhodTheme {
+            var themeChoice by remember {
+                mutableStateOf(SettingsStore(this@MainActivity).darkThemeChoice())
+            }
+            val darkTheme = themeChoice ?: isSystemInDarkTheme()
+            NaVykhodTheme(darkTheme = darkTheme) {
                 AppScreen(
                     onRequestExactAlarms = ::openExactAlarmSettings,
                     onRequestNotifications = ::askNotifications,
@@ -55,6 +64,11 @@ class MainActivity : ComponentActivity() {
                     onRequestRingChannel = ::openRingChannelSettings,
                     onRequestDndAccess = ::openDndAccessSettings,
                     onExportLogs = ::shareLogs,
+                    darkTheme = darkTheme,
+                    onDarkThemeChange = { dark ->
+                        SettingsStore(this@MainActivity).setDarkThemeChoice(dark)
+                        themeChoice = dark
+                    },
                 )
             }
         }

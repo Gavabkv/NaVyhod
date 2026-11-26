@@ -440,6 +440,14 @@ class SettingsStore(context: Context) {
         prefs.edit().putBoolean(KEY_PERMISSION_ASKED + kind, true).apply()
     }
 
+    /** null — тема как в системе; true/false — явный выбор пользователя. */
+    fun darkThemeChoice(): Boolean? =
+        if (prefs.contains(KEY_DARK_THEME)) prefs.getBoolean(KEY_DARK_THEME, false) else null
+
+    fun setDarkThemeChoice(dark: Boolean) {
+        prefs.edit().putBoolean(KEY_DARK_THEME, dark).apply()
+    }
+
     private companion object {
         const val PREFS_NAME = "alarm_settings"
         const val KEY_STORAGE_MIGRATED = "storage_migrated"
@@ -472,5 +480,6 @@ class SettingsStore(context: Context) {
         const val KEY_DEPARTURE_SPOKEN = "departure_spoken_"
         const val KEY_SIGNAL_DELIVERED = "signal_delivered_wake"
         const val KEY_PERMISSION_ASKED = "permission_asked_"
+        const val KEY_DARK_THEME = "dark_theme"
     }
 }

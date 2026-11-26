@@ -1011,6 +1011,16 @@ class AlarmLifecycleTest {
     }
 
     @Test
+    fun `theme choice is remembered between runs`() {
+        val store = SettingsStore(context)
+        assertNull(store.darkThemeChoice())
+        store.setDarkThemeChoice(true)
+        assertEquals(true, SettingsStore(context).darkThemeChoice())
+        store.setDarkThemeChoice(false)
+        assertEquals(false, SettingsStore(context).darkThemeChoice())
+    }
+
+    @Test
     fun `startup asks for do not disturb access once`() {
         shadowOf(context.getSystemService(android.app.NotificationManager::class.java))
             .setNotificationPolicyAccessGranted(false)
