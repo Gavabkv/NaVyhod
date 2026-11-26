@@ -1,4 +1,4 @@
-package com.example.dovykhoda
+package com.gavrovis.navyhod
 
 import java.time.LocalTime
 import java.util.Locale

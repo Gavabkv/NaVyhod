@@ -1,4 +1,4 @@
-package com.example.dovykhoda.ui
+package com.gavrovis.navyhod.ui
 
 import android.content.Context
 import android.content.Intent
@@ -38,15 +38,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.app.NotificationManagerCompat
-import com.example.dovykhoda.AlarmItem
-import com.example.dovykhoda.AlarmScheduler
-import com.example.dovykhoda.AlarmSettings
-import com.example.dovykhoda.LocaleHelper
-import com.example.dovykhoda.MainActivity
-import com.example.dovykhoda.R
-import com.example.dovykhoda.SchedulePlanner
-import com.example.dovykhoda.SettingsStore
-import com.example.dovykhoda.StatusNotifier
+import com.gavrovis.navyhod.AlarmItem
+import com.gavrovis.navyhod.AlarmScheduler
+import com.gavrovis.navyhod.AlarmSettings
+import com.gavrovis.navyhod.LocaleHelper
+import com.gavrovis.navyhod.MainActivity
+import com.gavrovis.navyhod.R
+import com.gavrovis.navyhod.SchedulePlanner
+import com.gavrovis.navyhod.SettingsStore
+import com.gavrovis.navyhod.StatusNotifier
 
 @Composable
 fun SettingsTab(

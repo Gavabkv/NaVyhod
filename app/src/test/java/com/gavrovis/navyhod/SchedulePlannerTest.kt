@@ -1,4 +1,4 @@
-package com.example.dovykhoda
+package com.gavrovis.navyhod
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse

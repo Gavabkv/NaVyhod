@@ -1,4 +1,4 @@
-package com.example.dovykhoda
+package com.gavrovis.navyhod
 
 import android.Manifest
 import android.app.AppOpsManager
@@ -29,7 +29,7 @@ import java.util.zip.ZipOutputStream
 /**
  * Файловые логи приложения: один файл на день, хранение 30 дней.
  *
- * Пишем в `Android/data/com.example.dovykhoda/files/logs/na-vyhod-ГГГГ-ММ-ДД.log`.
+ * Пишем в `Android/data/com.gavrovis.navyhod/files/logs/na-vyhod-ГГГГ-ММ-ДД.log`.
  * Если внешний каталог недоступен (например, до первой разблокировки),
  * используется внутренний/device-protected каталог. Сбой записи лога
  * никогда не должен ломать будильник, поэтому все операции обёрнуты в runCatching.

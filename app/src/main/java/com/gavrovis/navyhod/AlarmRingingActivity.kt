@@ -1,4 +1,4 @@
-package com.example.dovykhoda
+package com.gavrovis.navyhod
 
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -14,9 +14,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
-import com.example.dovykhoda.ui.AlarmConfirmation
-import com.example.dovykhoda.ui.RingingScreen
-import com.example.dovykhoda.ui.theme.NaVykhodTheme
+import com.gavrovis.navyhod.ui.AlarmConfirmation
+import com.gavrovis.navyhod.ui.RingingScreen
+import com.gavrovis.navyhod.ui.theme.NaVykhodTheme
 import java.time.LocalDateTime
 
 /**

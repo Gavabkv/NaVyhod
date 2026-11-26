@@ -1,4 +1,4 @@
-package com.example.dovykhoda.ui
+package com.gavrovis.navyhod.ui
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
@@ -37,12 +37,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.dovykhoda.LocaleHelper
-import com.example.dovykhoda.R
-import com.example.dovykhoda.SpeechText
-import com.example.dovykhoda.ui.theme.AlarmButtonDark
-import com.example.dovykhoda.ui.theme.AlarmButtonMedium
-import com.example.dovykhoda.ui.theme.AlarmButtonLight
+import com.gavrovis.navyhod.LocaleHelper
+import com.gavrovis.navyhod.R
+import com.gavrovis.navyhod.SpeechText
+import com.gavrovis.navyhod.ui.theme.AlarmButtonDark
+import com.gavrovis.navyhod.ui.theme.AlarmButtonMedium
+import com.gavrovis.navyhod.ui.theme.AlarmButtonLight
 import kotlinx.coroutines.delay
 import java.time.LocalTime
 

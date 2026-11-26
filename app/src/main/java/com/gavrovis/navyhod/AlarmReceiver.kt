@@ -1,4 +1,4 @@
-package com.example.dovykhoda
+package com.gavrovis.navyhod
 
 import android.content.BroadcastReceiver
 import android.content.Context

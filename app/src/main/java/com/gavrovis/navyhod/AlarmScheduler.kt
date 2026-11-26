@@ -1,4 +1,4 @@
-package com.example.dovykhoda
+package com.gavrovis.navyhod
 
 import android.app.AlarmManager
 import android.app.PendingIntent
@@ -8,10 +8,10 @@ import android.os.Build
 import android.util.Log
 
 object AlarmScheduler {
-    const val ACTION_TRIGGER = "com.example.dovykhoda.action.TRIGGER"
-    const val ACTION_PRE_NOTIFY = "com.example.dovykhoda.action.PRE_NOTIFY"
-    const val ACTION_LATE = "com.example.dovykhoda.action.LATE"
-    const val ACTION_DEPARTURE_REMINDER = "com.example.dovykhoda.action.DEPARTURE_REMINDER"
+    const val ACTION_TRIGGER = "com.gavrovis.navyhod.action.TRIGGER"
+    const val ACTION_PRE_NOTIFY = "com.gavrovis.navyhod.action.PRE_NOTIFY"
+    const val ACTION_LATE = "com.gavrovis.navyhod.action.LATE"
+    const val ACTION_DEPARTURE_REMINDER = "com.gavrovis.navyhod.action.DEPARTURE_REMINDER"
     const val EXTRA_REMINDER_MINUTES = "extra_reminder_minutes"
     const val EXTRA_REMINDER_RETRY = "extra_reminder_retry"
     const val EXTRA_TRIGGER_RETRY = "extra_trigger_retry"

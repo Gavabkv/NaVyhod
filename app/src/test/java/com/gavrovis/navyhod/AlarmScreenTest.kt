@@ -1,4 +1,4 @@
-package com.example.dovykhoda
+package com.gavrovis.navyhod
 
 import android.content.Context
 import android.os.UserManager
@@ -21,12 +21,12 @@ import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.unit.sp
-import com.example.dovykhoda.ui.AppScreen
-import com.example.dovykhoda.ui.RingingScreen
-import com.example.dovykhoda.ui.theme.AlarmButtonDark
-import com.example.dovykhoda.ui.theme.AlarmButtonLight
-import com.example.dovykhoda.ui.theme.AlarmButtonMedium
-import com.example.dovykhoda.ui.theme.NaVykhodTheme
+import com.gavrovis.navyhod.ui.AppScreen
+import com.gavrovis.navyhod.ui.RingingScreen
+import com.gavrovis.navyhod.ui.theme.AlarmButtonDark
+import com.gavrovis.navyhod.ui.theme.AlarmButtonLight
+import com.gavrovis.navyhod.ui.theme.AlarmButtonMedium
+import com.gavrovis.navyhod.ui.theme.NaVykhodTheme
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotNull

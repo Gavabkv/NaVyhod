@@ -1,4 +1,4 @@
-package com.example.dovykhoda.ui
+package com.gavrovis.navyhod.ui
 
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -50,14 +50,14 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.example.dovykhoda.AlarmItem
-import com.example.dovykhoda.AlarmScheduler
-import com.example.dovykhoda.R
-import com.example.dovykhoda.AlarmService
-import com.example.dovykhoda.AlarmSettings
-import com.example.dovykhoda.SchedulePlanner
-import com.example.dovykhoda.SettingsStore
-import com.example.dovykhoda.StatusNotifier
+import com.gavrovis.navyhod.AlarmItem
+import com.gavrovis.navyhod.AlarmScheduler
+import com.gavrovis.navyhod.R
+import com.gavrovis.navyhod.AlarmService
+import com.gavrovis.navyhod.AlarmSettings
+import com.gavrovis.navyhod.SchedulePlanner
+import com.gavrovis.navyhod.SettingsStore
+import com.gavrovis.navyhod.StatusNotifier
 import kotlinx.coroutines.delay
 import java.time.DayOfWeek
 

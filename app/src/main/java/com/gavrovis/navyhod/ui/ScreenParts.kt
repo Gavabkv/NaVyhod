@@ -1,4 +1,4 @@
-package com.example.dovykhoda.ui
+package com.gavrovis.navyhod.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -34,8 +34,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.example.dovykhoda.AlarmItem
-import com.example.dovykhoda.R
+import com.gavrovis.navyhod.AlarmItem
+import com.gavrovis.navyhod.R
 import java.time.DayOfWeek
 import java.time.Instant
 import java.time.ZoneId

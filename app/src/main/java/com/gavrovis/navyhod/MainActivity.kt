@@ -1,4 +1,4 @@
-package com.example.dovykhoda
+package com.gavrovis.navyhod
 
 import android.Manifest
 import android.app.AppOpsManager
@@ -25,8 +25,8 @@ import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import com.example.dovykhoda.ui.AppScreen
-import com.example.dovykhoda.ui.theme.NaVykhodTheme
+import com.gavrovis.navyhod.ui.AppScreen
+import com.gavrovis.navyhod.ui.theme.NaVykhodTheme
 
 class MainActivity : ComponentActivity() {
 

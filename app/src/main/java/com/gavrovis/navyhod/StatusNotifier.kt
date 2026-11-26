@@ -1,4 +1,4 @@
-package com.example.dovykhoda
+package com.gavrovis.navyhod
 
 import android.Manifest
 import android.app.Notification
@@ -20,7 +20,7 @@ object StatusNotifier {
     const val RING_NOTIFICATION_ID = 1002
     const val CHANNEL_STATUS = "alarm_status"
     const val CHANNEL_RINGING = "alarm_ringing"
-    const val ACTION_PRE_NOTIFY_DISMISSED = "com.example.dovykhoda.action.PRE_NOTIFY_DISMISSED"
+    const val ACTION_PRE_NOTIFY_DISMISSED = "com.gavrovis.navyhod.action.PRE_NOTIFY_DISMISSED"
     const val EXTRA_CYCLE_WAKE = "extra_cycle_wake"
     private const val PRE_NOTIFY_LEAD_MS = 12 * 60 * 60 * 1000L
     private const val RC_OPEN_APP = 10

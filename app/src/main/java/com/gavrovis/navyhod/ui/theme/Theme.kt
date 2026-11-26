@@ -1,4 +1,4 @@
-package com.example.dovykhoda.ui.theme
+package com.gavrovis.navyhod.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme

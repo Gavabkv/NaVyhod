@@ -1,4 +1,4 @@
-package com.example.dovykhoda
+package com.gavrovis.navyhod
 
 import android.app.Notification
 import android.app.Service
@@ -806,15 +806,15 @@ class AlarmService : Service() {
     companion object {
         private const val TAG = "AlarmService"
         private const val DEFAULT_WAKE_LOCK_MS = 10 * 60 * 1_000L
-        const val ACTION_TRIGGER = "com.example.dovykhoda.action.SERVICE_TRIGGER"
-        const val ACTION_SILENCE = "com.example.dovykhoda.action.SILENCE"
-        const val ACTION_STOP_ALL = "com.example.dovykhoda.action.STOP_ALL"
-        const val ACTION_DISABLE = "com.example.dovykhoda.action.DISABLE"
-        const val ACTION_LATE = "com.example.dovykhoda.action.SERVICE_LATE"
-        const val ACTION_DEPARTURE_REMINDER = "com.example.dovykhoda.action.SERVICE_DEPARTURE_REMINDER"
-        const val ACTION_REMIND_ONLY = "com.example.dovykhoda.action.REMIND_ONLY"
-        private const val ACTION_REFRESH = "com.example.dovykhoda.action.REFRESH_REMINDERS"
-        const val ACTION_RING_FINISHED = "com.example.dovykhoda.action.RING_FINISHED"
+        const val ACTION_TRIGGER = "com.gavrovis.navyhod.action.SERVICE_TRIGGER"
+        const val ACTION_SILENCE = "com.gavrovis.navyhod.action.SILENCE"
+        const val ACTION_STOP_ALL = "com.gavrovis.navyhod.action.STOP_ALL"
+        const val ACTION_DISABLE = "com.gavrovis.navyhod.action.DISABLE"
+        const val ACTION_LATE = "com.gavrovis.navyhod.action.SERVICE_LATE"
+        const val ACTION_DEPARTURE_REMINDER = "com.gavrovis.navyhod.action.SERVICE_DEPARTURE_REMINDER"
+        const val ACTION_REMIND_ONLY = "com.gavrovis.navyhod.action.REMIND_ONLY"
+        private const val ACTION_REFRESH = "com.gavrovis.navyhod.action.REFRESH_REMINDERS"
+        const val ACTION_RING_FINISHED = "com.gavrovis.navyhod.action.RING_FINISHED"
         const val EXTRA_CONFIRMED_STOP = "extra_confirmed_stop"
         private const val EXTRA_TEST = "extra_test"
         private const val SPEECH_DELAY_MS = 1_200L
