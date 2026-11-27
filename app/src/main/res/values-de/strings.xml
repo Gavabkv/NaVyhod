@@ -19,7 +19,6 @@
     <string name="done">Fertig</string>
     <string name="delete">Löschen</string>
 
-    <string name="alarm_leave_days">Aufbruch um %1$s · %2$s</string>
     <string name="alarm_next_signal">Nächstes Signal: %1$s</string>
 
     <string name="editor_title">Alarm</string>

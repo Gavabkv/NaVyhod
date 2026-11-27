@@ -19,7 +19,7 @@
     <string name="done">Done</string>
     <string name="delete">Delete</string>
 
-    <string name="alarm_leave_days">Leave at %1$s · %2$s</string>
+    <string name="alarm_times">%1$s — %2$s</string>
     <string name="alarm_next_signal">Next signal: %1$s</string>
 
     <string name="editor_title">Alarm</string>

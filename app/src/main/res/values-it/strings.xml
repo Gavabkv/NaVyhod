@@ -19,7 +19,6 @@
     <string name="done">Fatto</string>
     <string name="delete">Elimina</string>
 
-    <string name="alarm_leave_days">Uscita alle %1$s · %2$s</string>
     <string name="alarm_next_signal">Prossimo segnale: %1$s</string>
 
     <string name="editor_title">Sveglia</string>

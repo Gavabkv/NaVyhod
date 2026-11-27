@@ -19,7 +19,6 @@
     <string name="done">完了</string>
     <string name="delete">削除</string>
 
-    <string name="alarm_leave_days">出発 %1$s · %2$s</string>
     <string name="alarm_next_signal">次の信号: %1$s</string>
 
     <string name="editor_title">アラーム</string>

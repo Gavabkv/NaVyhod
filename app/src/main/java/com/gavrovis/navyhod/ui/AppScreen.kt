@@ -371,14 +371,14 @@ private fun AlarmCard(
         ) {
             Column(Modifier.weight(1f)) {
                 Text(
-                    alarm.wakeLabel,
+                    stringResource(R.string.alarm_times, alarm.wakeLabel, alarm.leaveLabel),
                     style = MaterialTheme.typography.displaySmall,
                     fontWeight = FontWeight.Light,
                     color = if (alarm.enabled) MaterialTheme.colorScheme.onSurface
                     else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
                 )
                 Text(
-                    stringResource(R.string.alarm_leave_days, alarm.leaveLabel, daysLabel(alarm.days)),
+                    daysLabel(alarm.days),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

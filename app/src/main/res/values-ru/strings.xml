@@ -19,7 +19,6 @@
     <string name="done">Готово</string>
     <string name="delete">Удалить</string>
 
-    <string name="alarm_leave_days">Выход в %1$s · %2$s</string>
     <string name="alarm_next_signal">Ближайший сигнал: %1$s</string>
 
     <string name="editor_title">Будильник</string>

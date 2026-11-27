@@ -116,7 +116,7 @@ class AlarmScreenTest {
         showScreen()
         compose.onNodeWithTag("alarms_title").assertIsDisplayed()
         compose.onNodeWithTag("alarm_card_1").assertIsDisplayed()
-        compose.onNodeWithText("07:00").assertIsDisplayed()
+        compose.onNodeWithText("07:00 — 08:00").assertIsDisplayed()
         compose.onNodeWithTag("tab_settings").performClick()
         compose.onNodeWithTag("settings_title").assertIsDisplayed()
         compose.onNodeWithTag("interval_chip_5").performScrollTo().assertIsDisplayed()
@@ -134,9 +134,10 @@ class AlarmScreenTest {
     }
 
     @Test
-    fun `alarm card shows departure and days`() {
+    fun `alarm card shows times and days`() {
         showScreen()
-        compose.onNodeWithText("Выход в 08:00 · Каждый день").assertIsDisplayed()
+        compose.onNodeWithText("07:00 — 08:00").assertIsDisplayed()
+        compose.onNodeWithText("Каждый день").assertIsDisplayed()
     }
 
     @Test

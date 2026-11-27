@@ -19,7 +19,6 @@
     <string name="done">OK</string>
     <string name="delete">Supprimer</string>
 
-    <string name="alarm_leave_days">Départ à %1$s · %2$s</string>
     <string name="alarm_next_signal">Prochain signal : %1$s</string>
 
     <string name="editor_title">Alarme</string>
